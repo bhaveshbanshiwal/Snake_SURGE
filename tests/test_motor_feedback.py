@@ -7,7 +7,6 @@ Used to baseline normal load vs obstacle stall current.
 """
 
 import time
-# pyrefly: ignore [missing-import]
 from dynamixel_sdk import *
 
 import sys

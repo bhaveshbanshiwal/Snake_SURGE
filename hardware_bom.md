@@ -1,67 +1,56 @@
-# Hardware Comparison & Bill of Materials (Budget: ₹1,00,000)
+# Hardware Bill of Materials (Budget: ₹1,00,000)
 
-With your budget increased to **1 Lakh (₹1,00,000)**, we can upgrade key components for better reliability, higher torque, and smoother control loops, while still keeping the project fully affordable. 
+This document contains the finalized hardware required to build the 10-motor **SURGE-SNAKE** using the Dynamixel ecosystem. 
 
-Below is a detailed comparison of the **Baseline** hardware versus the **Better Alternatives** that fit within your new budget.
-
----
-
-## 1. Core Actuators (Servos) - *Require 12 Units*
-The actuators are the most critical part of the torque-controlled snake robot.
-
-| Component Option | Specs & Torque | Approx. Cost (12 Units) | Pros / Cons | Verdict |
-| :--- | :--- | :--- | :--- | :--- |
-| **[Baseline]** Feetech STS3215 | 3.0 Nm, Potentiometer Encoder | ~₹30,000 (₹2.5k ea) | **Pros:** Very cheap, decent torque.<br>**Cons:** Prone to jitter, lower lifespan under load. | Good for basic prototyping. |
-| **[Upgrade]** Feetech STS3032 / STS3246 | 3.0 - 4.5 Nm, Magnetic Encoder | ~₹48,000 (₹4k ea) | **Pros:** 360° magnetic encoders provide *extremely* smooth velocity/position feedback crucial for PID torque control.<br>**Cons:** Slightly more expensive. | **Highly Recommended.** Fits the budget and dramatically improves control quality. |
-| **[Premium]** Dynamixel XL430-W250-T | 1.5 Nm, Contactless Absolute | ~₹84,000 (₹7k ea) | **Pros:** Industry standard, incredible Dynamixel SDK support.<br>**Cons:** Lower stall torque (1.5 Nm) than Feetech, takes up most of your budget. | Only if you heavily prioritize software ecosystem over sheer torque. |
-
-*(Note: The originally requested Dynamixel XH540-W270-R costs ~₹30k each, meaning 12 units would cost ₹3.6 Lakhs, which is still out of scope).*
+With a budget of **1 Lakh (₹1,00,000)** and standardizing on the **Dynamixel XL330-M288** motors, the project comes in significantly under budget, leaving plenty of room for spares, future sensor upgrades, and high-quality mechanical components.
 
 ---
 
-## 2. Microcontroller / "Brain"
-The controller needs to handle complex Bellows Model math and 50-100Hz PID loops for 12 motors simultaneously.
+## 1. Core Actuators (Servos) - *Require 10 Units*
 
-| Component Option | Specs | Approx. Cost | Pros / Cons | Verdict |
-| :--- | :--- | :--- | :--- | :--- |
-| **[Baseline]** ESP32 Dev Board | 240MHz, Dual Core | ~₹500 | **Pros:** Cheap, has Bluetooth/WiFi for mobile app.<br>**Cons:** Floating-point math for 12 PID loops might limit control frequency. | Great for starter kit. |
-| **[Upgrade]** Teensy 4.1 | 600MHz ARM Cortex-M7 | ~₹3,500 | **Pros:** Blisteringly fast math processing. Flawless high-speed serial comms.<br>**Cons:** No built-in WiFi/Bluetooth. | **Best for Control Loop.** Add an ESP32 alongside it purely for Bluetooth if needed. |
-| **[Premium]** Raspberry Pi 4/5 + U2D2 | Full Linux OS | ~₹8,000 | **Pros:** Allows ROS (Robot Operating System) integration, computer vision.<br>**Cons:** Overkill for basic rolling, requires tethering or complex battery setup. | Good for future upgrades, but complex for now. |
+| Component | Specs & Torque | Approx. Cost (10 Units) | Role in Robot |
+| :--- | :--- | :--- | :--- |
+| **Dynamixel XL330-M288-T** | 0.5 Nm, 5V, Contactless Absolute Encoder | ~₹30,000 (₹3k ea) | The core joints of the snake. Provides extremely precise position, velocity, and current (load) feedback crucial for obstacle avoidance. |
+| **Spare Motors** | Same as above | ~₹6,000 (2 extra) | Highly recommended to buy 2 spares in case of gear stripping during extreme physical testing. |
+
+---
+
+## 2. Computing Brain & Interface
+
+The Dynamixel motors require a dedicated USB interface to talk to your computer or Raspberry Pi.
+
+| Component | Specs | Approx. Cost | Role in Robot |
+| :--- | :--- | :--- | :--- |
+| **Robotis U2D2** | USB to TTL Converter | ~₹4,500 | Plugs into your PC/Pi and outputs the 3-pin TTL data signal for the Dynamixel motors. |
+| **Robotis U2D2 Power Hub Board (PHB)** | Power Injector | ~₹1,500 | Mounts to the U2D2. Combines the data signal with raw 5V power so the motors don't fry your USB port. |
+| **Raspberry Pi 4 (Optional)** | 4GB RAM, Linux OS | ~₹5,500 | If you want the snake untethered from your laptop, the Pi will run the `main.py` Python code onboard. |
 
 ---
 
 ## 3. Power Supply
-Powering 12 servos at stall torque requires serious current (Up to 40A-50A peak at 12V).
 
-| Component Option | Specs | Approx. Cost | Pros / Cons | Verdict |
-| :--- | :--- | :--- | :--- | :--- |
-| **[Baseline]** Generic 12V 40A SMPS | 480W Generic | ~₹2,000 | **Pros:** Very cheap.<br>**Cons:** Noisy power output, can fail spectacularly under spike loads. | Not recommended for 12 high-torque motors. |
-| **[Upgrade]** Mean Well LRS-450-12 | 12V 37.5A Industrial | ~₹5,000 | **Pros:** Industry gold standard for reliability and clean power.<br>**Cons:** Larger footprint. | **Highly Recommended.** Protects your expensive servos from voltage spikes. |
-| **[Untethered]** 3S LiPo Battery Setup | 11.1V 5000mAh 50C + Charger | ~₹6,000 | **Pros:** Makes the snake robot completely wireless/untethered.<br>**Cons:** Voltage drops as it discharges (affecting torque), fire risk if mishandled. | Buy this *after* tethered testing is complete. |
+The **XL330-M288** motors require **5 Volts** (not 12V!). Powering 10 motors at stall torque requires roughly 10 Amps to 15 Amps of current.
 
----
-
-## 4. Mechanical, Wiring & Miscellaneous
-These components ensure the robot doesn't melt its own wires or rip itself apart.
-
-| Component | Baseline Option | Better Alternative | Approx. Cost |
+| Component Option | Specs | Approx. Cost | Pros / Cons |
 | :--- | :--- | :--- | :--- |
-| **Signal Converter** | Generic TTL to RS485 (₹500) | **Waveshare TTL to RS485 Isolated** (Protects microcontroller from motor feedback spikes) | ~₹1,500 |
-| **Wiring** | Standard 18 AWG Wire (₹300) | **14 AWG High-Strand Silicone Wire** (Handles 50A without melting, highly flexible for snake joints) | ~₹1,000 |
-| **Joint Bearings** | None (Plastic-on-plastic) (₹0) | **F623ZZ Flange Bearings** (Takes the mechanical load off the servo horn, preventing snapped shafts) | ~₹1,500 |
-| **Robot Skin** | Corrugated Drain Pipe (₹500) | **Braided Expandable Rubber Sleeving** (Expands as the snake bends, provides excellent ground traction) | ~₹2,000 |
+| **Mean Well LRS-100-5 (Tethered)** | 5V, 20A Industrial SMPS | ~₹2,000 | **Pros:** Extremely reliable, clean power for testing on a desk.<br>**Cons:** Keeps the snake tethered to the wall. |
+| **2S LiPo Battery + 5V UBEC (Untethered)** | 7.4V LiPo + 10A 5V Step-Down | ~₹3,500 | **Pros:** Makes the snake fully wireless.<br>**Cons:** Requires careful voltage monitoring and a fire-safe charger. |
 
 ---
 
-## Summary Recommendation for ₹1 Lakh Budget
+## 4. Wiring & Mechanical Setup
 
-If you want the **highest quality build** that stays well within ₹1,00,000, we recommend this specific configuration:
+| Component | Specs | Approx. Cost |
+| :--- | :--- | :--- |
+| **Dynamixel X3P Cables** | 100mm to 150mm lengths (Pack of 10) | ~₹1,500 | Daisy-chains the data and power from one motor to the next. |
+| **F623ZZ Flange Bearings** | For opposite side of servo horn | ~₹1,000 | Takes the mechanical load off the servo horn, preventing snapped shafts. |
+| **Braided Expandable Sleeving** | Rubberized mesh tube | ~₹2,000 | Acts as the "skin" of the snake. Expands as it bends and provides traction against the floor. |
+| **M2 & M2.5 Machine Screws** | Assorted Kit | ~₹500 | For mounting the 3D printed brackets to the Dynamixels. |
 
-1. **Servos:** 12x Feetech STS3032 (Magnetic Encoders) ➔ ~₹48,000
-2. **Controller:** Teensy 4.1 + ESP32 (For Bluetooth) ➔ ~₹4,000
-3. **Power:** Mean Well LRS-450-12 (Tethered) + Waveshare Isolated TTL ➔ ~₹6,500
-4. **Mechanical & Wiring:** 14 AWG Silicone wire, Flange Bearings, Braided Rubber Skin, M2/M3 Screws ➔ ~₹5,000
+---
 
-**Total High-Quality Build Cost: ~₹63,500 INR**
+## Summary Recommendation 
 
-*(This leaves nearly ₹36,500 in your budget for spare servos, a high-capacity LiPo battery setup later, or paying for the university's 3D printing materials).*
+**Total Estimated Cost: ~₹52,500 INR** (out of ₹1,00,000 budget)
+
+Standardizing on the **Dynamixel XL330-M288** is highly efficient. It operates at 5V, saving weight on batteries, and integrates perfectly with the official Robotis `dynamixel_sdk`. The Python code provided in this repository is designed specifically for this exact hardware list.

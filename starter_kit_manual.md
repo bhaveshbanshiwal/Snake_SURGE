@@ -1,74 +1,72 @@
-# Snake Robot Starter Kit Manual
+# Snake Robot Starter Kit Manual (Dynamixel Edition)
 
-Welcome to the Starter Kit for the self-adaptive snake robot project! This manual focuses on testing individual motor movement (continuous rolling) using a popular microcontroller, the **ESP32**. 
+Welcome to the Starter Kit for the self-adaptive snake robot project! This manual focuses on testing individual motor movement, reading current (load) feedback, and testing the `dynamixel_sdk` using Python.
 
-The ESP32 is cheap, powerful, and has built-in Bluetooth and WiFi, allowing you to easily control your snake robot using a smartphone app.
-
----
-
-## 1. Starter Kit Hardware Requirements
-
-To begin testing independent motor rolling, you will need:
-1. **ESP32 Development Board (30-pin or 38-pin)**
-2. **Serial Bus Servo (1 to 4 units)** (e.g., Feetech STS3215 or Hiwonder LX-16A - verify these fit your budget)
-3. **TTL to RS-485/Serial Converter** (Required to let the ESP32 communicate with the serial bus servo)
-4. **12V High-Current Power Supply** (To power the servos. Do NOT power servos from the ESP32!)
-5. **Breadboard and Jumper Wires**
+By the end of this guide, you will have your first Dynamixel XL330 motor spinning and reporting its load back to your computer.
 
 ---
 
-## 2. Software Setup (Arduino IDE)
+## 1. Hardware Requirements for Testing
 
-We will use the Arduino IDE to write and upload ("burn") code to the ESP32.
-
-### Step 2.1: Install Arduino IDE
-Download and install the latest Arduino IDE from [arduino.cc/en/software](https://www.arduino.cc/en/software).
-
-### Step 2.2: Add ESP32 Board Support
-1. Open Arduino IDE. Go to **File -> Preferences**.
-2. In the "Additional Boards Manager URLs" field, paste this URL:
-   `https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json`
-3. Click **OK**.
-4. Go to **Tools -> Board -> Boards Manager...**
-5. Search for `esp32` and install the package by **Espressif Systems**.
-
-### Step 2.3: Install Servo Libraries
-Depending on which brand of serial bus servo you purchase (Feetech or Hiwonder), you will need their specific Arduino library.
-1. Go to **Sketch -> Include Library -> Manage Libraries...**
-2. Search for your servo brand (e.g., `SCServo` for Feetech) and install it.
+To begin testing, you need the following connected to your computer:
+1. **Dynamixel XL330-M288 Motor** (At least 1 unit, though you can daisy chain 2 for this test)
+2. **Robotis U2D2** (USB to TTL interface)
+3. **U2D2 Power Hub Board (PHB)** (To inject power into the data line)
+4. **5V Power Supply** (e.g., Mean Well SMPS or a 5V bench power supply capable of at least 3A)
+5. **Dynamixel X3P Cables** (To connect everything together)
 
 ---
 
-## 3. How to Burn Codes (Flashing)
+## 2. Hardware Assembly
 
-Once your code is ready, you need to "burn" (upload) it to the ESP32 so it can run independently.
-
-1. **Connect:** Plug your ESP32 into your computer using a micro-USB or USB-C cable (make sure it's a data cable, not just for charging).
-2. **Select Board:** In Arduino IDE, go to **Tools -> Board -> ESP32 Arduino** and select **"DOIT ESP32 DEVKIT V1"** (or the specific name of your ESP32 board).
-3. **Select Port:** Go to **Tools -> Port** and select the COM port that appears when the ESP32 is plugged in.
-4. **Compile & Upload:** Click the **Upload** button (the right-pointing arrow at the top left of the IDE). 
-   - *Note:* When the console says "Connecting...", you may need to press and hold the **BOOT** button on the ESP32 until the upload starts.
-5. **Done!** The code is now permanently stored on the ESP32. It will run automatically whenever the ESP32 is powered on.
+1. Connect the **U2D2** to your computer via USB.
+2. Mount the **U2D2 Power Hub Board** onto the U2D2.
+3. Wire the **5V Power Supply** to the screw terminals on the Power Hub Board. Make sure the polarity (+ and -) is correct.
+4. Plug one end of the **X3P Cable** into the Power Hub Board, and the other end into your **Dynamixel XL330** motor.
+5. Turn on the 5V power supply. The LED on the back of the Dynamixel motor should flash red once to indicate it has power.
 
 ---
 
-## 4. Using the Smartphone App (Bluetooth Control)
+## 3. Software Setup (Python)
 
-The starter code provided uses **Bluetooth Serial**. This allows you to connect any generic Bluetooth Terminal app on your phone to send commands to the robot.
+We are using Python to control the snake robot, relying on the official `dynamixel_sdk`.
 
-1. Download a "Bluetooth Serial Terminal" app from the Google Play Store or Apple App Store.
-2. Turn on Bluetooth on your phone and pair it with the device named **"SnakeRobot_BT"**.
-3. Open the app, connect to "SnakeRobot_BT".
-4. Type `ROLL 50` and hit send. The motor will start rolling at speed 50!
-5. Type `STOP` to halt the motor.
+### Step 3.1: Identify the COM Port
+- **Windows:** Open Device Manager, look under "Ports (COM & LPT)" and find the "USB Serial Port". Note the number (e.g., `COM3`).
+- **Linux/Raspberry Pi:** Open a terminal and run `ls /dev/ttyUSB*`. It will usually be `/dev/ttyUSB0`.
+
+### Step 3.2: Install Requirements
+Open a terminal in the root of the `SURGE-SNAKE` project and install the dependencies:
+```bash
+pip install -r requirements.txt
+```
+*(This installs `dynamixel-sdk` and other necessary libraries).*
 
 ---
 
-## 5. CAD & 3D Printed Parts Reference
+## 4. Running the Feedback Test
 
-*Note: The university will provide the 3D printed parts based on the CAD models. Do not worry about printing these yourself.*
+To ensure everything is working and to calibrate your obstacle avoidance thresholds, run the motor feedback test script.
 
-You will need to request the following CAD files to be printed:
-1. **U-Shaped Servo Housing:** The main body that encapsulates the servo.
-2. **Servo Linkage Bracket:** Connects the output shaft of one servo to the back of the next.
-3. **Ground-Contact Rollers/Wheels:** The outer cylindrical wheels that mount onto the servos, which will make direct contact with the ground for rolling.
+1. Open `tests/test_motor_feedback.py` in your code editor.
+2. Verify the configuration at the top of the file:
+   - Make sure `DXL_ID = 1` matches your motor's ID (brand new motors default to ID 1).
+   - Ensure `DEVICENAME` is set to your COM port (e.g., `'COM3'`).
+3. Run the script:
+   ```bash
+   python tests/test_motor_feedback.py
+   ```
+
+### What to Expect:
+- The motor will enable its torque and stiffen up, holding its center position.
+- Your terminal will print a continuous stream of Position, Velocity, and Current (mA).
+- **The Obstacle Test:** Gently try to force the motor horn to rotate with your fingers. You will see the `Current (mA)` value spike up on your screen. This spike is exactly what the `ObstacleAvoidance` script in `main.py` looks for to detect collisions!
+
+---
+
+## 5. Next Steps
+
+Once the feedback test is successful, you can connect all **10 motors** in a daisy chain. 
+*(Note: You will need to use the Dynamixel Wizard 2.0 software to change each motor's ID from 1 to 10 so they don't conflict on the network).*
+
+After setting the IDs, you are ready to run `python main.py` and watch the snake slither!

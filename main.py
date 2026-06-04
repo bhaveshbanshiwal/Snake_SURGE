@@ -24,8 +24,8 @@ else:
 BAUDRATE            = 57600
 PROTOCOL_VERSION    = 2.0
 
-# As discussed, we are starting with 2 motors for testing, scaling up to 10
-NUM_MOTORS          = 2  
+# As discussed, scaling up to 10 motors
+NUM_MOTORS          = 10  
 
 # Control Table Addresses
 ADDR_TORQUE_ENABLE      = 64
