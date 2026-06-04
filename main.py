@@ -1,74 +1,103 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Main loop for SURGE-SNAKE.
+Integrates locomotion kinematics, Dynamixel SDK hardware calls, and obstacle avoidance.
+"""
+
 import time
-import math
-from src.robot_config import Config
-from src.servo_driver import ServoDriver
-from src.kinematics import Kinematics
-from src.torque_controller import TorqueController
+import sys
+import os
+
+from dynamixel_sdk import *
+
+# Add src folder to path
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+from snake_locomotion import SnakeKinematics
+from obstacle_avoidance import ObstacleAvoidance
+
+# --- Hardware Configuration ---
+# Automatically detect OS to set correct serial port
+if sys.platform.startswith('win'):
+    DEVICENAME          = 'COM3'
+else:
+    DEVICENAME          = '/dev/ttyUSB0'  # Default port on Raspberry Pi
+BAUDRATE            = 57600
+PROTOCOL_VERSION    = 2.0
+
+# As discussed, we are starting with 2 motors for testing, scaling up to 10
+NUM_MOTORS          = 2  
+
+# Control Table Addresses
+ADDR_TORQUE_ENABLE      = 64
+ADDR_GOAL_POSITION      = 116
+ADDR_PRESENT_CURRENT    = 126
+
+def init_motors(packetHandler, portHandler):
+    # Enable Torque for all configured motors
+    for dxl_id in range(1, NUM_MOTORS + 1):
+        dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, dxl_id, ADDR_TORQUE_ENABLE, 1)
+        if dxl_comm_result != COMM_SUCCESS:
+            print(f"Failed to enable torque for motor {dxl_id}. Is it connected?")
+        else:
+            print(f"Torque enabled for motor {dxl_id}")
+
+def disable_motors(packetHandler, portHandler):
+    for dxl_id in range(1, NUM_MOTORS + 1):
+        packetHandler.write1ByteTxRx(portHandler, dxl_id, ADDR_TORQUE_ENABLE, 0)
 
 def main():
-    print("=== Self-Adaptive Snake Robot Controller ===")
+    print("--- SURGE-SNAKE Initializing ---")
     
-    # 1. Initialization
-    driver = ServoDriver(num_servos=Config.NUM_JOINTS)
-    if not driver.connect():
-        print("Failed to connect to hardware. Exiting.")
+    # Init SDK
+    portHandler = PortHandler(DEVICENAME)
+    packetHandler = PacketHandler(PROTOCOL_VERSION)
+    
+    if not portHandler.openPort() or not portHandler.setBaudRate(BAUDRATE):
+        print("Failed to open port. Check connection and COM port.")
         return
-        
-    driver.set_torque_mode()
+
+    init_motors(packetHandler, portHandler)
     
-    kinematics = Kinematics()
-    torque_controller = TorqueController()
+    # Init logic modules
+    kinematics = SnakeKinematics(num_motors=NUM_MOTORS)
+    avoidance = ObstacleAvoidance(current_threshold=350) # 350mA stall threshold
     
     start_time = time.time()
-    last_time = 0.0
     
-    # Keep track of previous targets for velocity calculation
-    previous_targets = [0.0] * Config.NUM_JOINTS
-    
-    print("Starting Main Control Loop...")
-    
+    print("\nStarting Main Control Loop. Press Ctrl+C to stop.")
     try:
-        # Run for 10 seconds as a test (or True for infinite loop)
-        for _ in range(int(10 / Config.DT)):
+        while True:
             current_time = time.time() - start_time
-            dt = current_time - last_time
-            if dt < Config.DT:
-                time.sleep(Config.DT - dt)
-                current_time = time.time() - start_time
-                dt = current_time - last_time
+            
+            # 1. Read Feedback (Sensors)
+            motor_currents = {}
+            for dxl_id in range(1, NUM_MOTORS + 1):
+                cur, _, _ = packetHandler.read2ByteTxRx(portHandler, dxl_id, ADDR_PRESENT_CURRENT)
+                if cur > 32767:
+                    cur -= 65536
+                motor_currents[dxl_id] = cur
                 
-            last_time = current_time
+            # 2. State Machine Evaluation (Obstacle Detection & Evasion sequence)
+            current_state = avoidance.process_state(current_time, motor_currents)
             
-            # 2. Telemetry Loop
-            # Read current Position, Velocity, and Load
-            states = driver.read_all_states()
-            
-            # 3. Kinematic Calculation
-            # Calculate the desired theoretical backbone curve targets
-            target_angles = kinematics.calculate_target_angles(current_time)
-            target_velocities = kinematics.calculate_target_velocities(target_angles, previous_targets, dt)
-            previous_targets = target_angles
-            
-            # 4. & 5. PID Calculation and Modification
-            # Compute desired torques with Shape and Radius modifications
-            target_torques = torque_controller.compute_torques(states, target_angles, target_velocities)
-            
-            # 6. Actuation
-            # Send updated target torques to servos
-            driver.write_target_torques(target_torques)
-            
-            # Print debug for joint 0
-            if int(current_time * 100) % 50 == 0:
-                print(f"t={current_time:.2f}s | J0 Target Pos: {target_angles[0]:.2f} rad | J0 Actual Pos: {states[0].position:.2f} rad | Cmd Torque: {target_torques[0]:.2f} Nm")
+            # 3. Kinematics calculation based on the current gait state
+            target_positions = kinematics.calculate_positions(current_time, mode=current_state)
                 
+            # 4. Actuation (Send commands)
+            for dxl_id, pos in target_positions.items():
+                packetHandler.write4ByteTxRx(portHandler, dxl_id, ADDR_GOAL_POSITION, pos)
+                
+            # Small delay to prevent saturating the serial bus
+            time.sleep(0.02)
+            
     except KeyboardInterrupt:
-        print("\n[!] Ctrl+C Detected. Stopping Robot.")
-        
+        print("\nHalting Snake...")
     finally:
-        # Safely shut down motors (set torque to 0)
-        print("Disabling Servos...")
-        driver.write_target_torques([0.0] * Config.NUM_JOINTS)
-        print("Done.")
+        disable_motors(packetHandler, portHandler)
+        portHandler.closePort()
+        print("Shutdown complete.")
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
