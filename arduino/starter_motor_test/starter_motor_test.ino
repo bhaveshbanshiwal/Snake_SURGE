@@ -21,18 +21,19 @@ int motorID = 1; // Default ID of the first servo
 void setup() {
   // Initialize Serial Monitor for debugging via USB
   Serial.begin(115200);
-  
+
   // Initialize Bluetooth Serial
-  SerialBT.begin("SnakeRobot_BT"); // This is the name you will see on your phone!
+  SerialBT.begin(
+      "SnakeRobot_BT"); // This is the name you will see on your phone!
   Serial.println("Bluetooth Started! Ready to pair.");
 
   // Initialize Hardware Serial 2 for the Servo communication
   Serial2.begin(1000000, SERIAL_8N1, RXD2, TXD2);
-  
+
   // Initialize Servo Library here (e.g., Feetech, Dynamixel, Hiwonder)
   // sms_sts.pSerial = &Serial2;
   // delay(1000);
-  
+
   Serial.println("Starter Kit Initialized. Send commands via Bluetooth App.");
   Serial.println("Commands:");
   Serial.println("  ROLL <speed>  (e.g., ROLL 100)");
@@ -49,30 +50,28 @@ void loop() {
       // Extract the speed value
       String speedStr = command.substring(5);
       currentSpeed = speedStr.toInt();
-      
+
       Serial.print("Command received: ROLL at speed ");
       Serial.println(currentSpeed);
       SerialBT.print("Rolling at speed: ");
       SerialBT.println(currentSpeed);
-      
+
       // --- INSERT SERVO COMMAND HERE ---
       // Command the servo to spin continuously (Wheel Mode)
       // Example for Feetech:
       // sms_sts.WriteSpe(motorID, currentSpeed, 0); // speed, acceleration
-      
-    } 
-    else if (command == "STOP") {
+
+    } else if (command == "STOP") {
       currentSpeed = 0;
       Serial.println("Command received: STOP");
       SerialBT.println("Motor Stopped.");
-      
+
       // --- INSERT SERVO COMMAND HERE ---
       // Stop the servo
       // Example for Feetech:
       // sms_sts.WriteSpe(motorID, 0, 0);
-      
-    } 
-    else {
+
+    } else {
       SerialBT.println("Unknown command. Use: ROLL <speed> or STOP");
     }
   }
@@ -86,6 +85,6 @@ void loop() {
      // stop motor...
   }
   */
-  
+
   delay(10); // Small delay to prevent watchdog reset
 }
