@@ -12,10 +12,8 @@ import os
 
 from dynamixel_sdk import *
 
-# Add src folder to path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
-from snake_locomotion import SnakeKinematics
-from obstacle_avoidance import ObstacleAvoidance
+from src.snake_locomotion import SnakeKinematics
+from src.obstacle_avoidance import ObstacleAvoidance
 
 # --- Hardware Configuration ---
 # Automatically detect OS to set correct serial port
@@ -101,3 +99,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+    
