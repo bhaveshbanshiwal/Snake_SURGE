@@ -34,15 +34,16 @@ def set_angle(angle):
 try:
     print("Testing SG90 Servo on GPIO 13. Press Ctrl+C to stop.")
 
-    for i in range(0, 160, 40):
-        print(f"Moving to {i}")
-        set_angle(i)
-        time.sleep(1)
+    while True:
+        for i in range(0, 160, 40):
+            print(f"Moving to {i}")
+            set_angle(i)
+            time.sleep(0.5)
 
-    for i in range(160, 0, -40):
-        print(f"Moving to {i}")
-        set_angle(i)
-        time.sleep(1)
+        for i in range(160, 0, -40):
+            print(f"Moving to {i}")
+            set_angle(i)
+            time.sleep(0.5)
 
     # while True:
     #     print("Moving to 0 degrees")
