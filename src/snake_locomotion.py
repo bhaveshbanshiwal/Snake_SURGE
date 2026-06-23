@@ -1,57 +1,48 @@
 import math
-import time
 
 class SnakeKinematics:
     def __init__(self, num_motors=10, center_pos=2048):
         """
         Initialize the Snake Kinematics engine.
-        :param num_motors: Total number of Dynamixel motors in the snake.
-        :param center_pos: The encoder value that represents 0 degrees (straight).
-                           For XL330, the range is 0-4095, so 2048 is center.
+        Now matches the continuous serpenoid math from the PyBullet simulation.
         """
         self.num_motors = num_motors
         self.center_pos = center_pos
         
-        # Locomotion parameters (can be tuned for different gaits)
-        self.amplitude = 400       # How wide the wave is (in encoder ticks)
-        self.frequency = 3.0       # How fast the wave propagates
-        self.phase_shift = 1.2     # Phase difference between adjacent segments
-        self.turn_offset = 300     # Encoder ticks to bend the spine during a turn
+        # Locomotion parameters (standardized to SI/radians to match simulation)
+        self.amplitude = 0.8       # Amplitude in radians
+        self.frequency = 2.0       # Frequency in rad/s
+        self.phase_shift = 1.0     # Phase difference between joints
+        self.turn_offset = 0.0     # Turning bias in radians
 
-    def calculate_positions(self, current_time, mode="SLITHER"):
+        # Dynamixel XL330 0-4095 represents 0-360 degrees. 
+        self.ticks_per_radian = 4096.0 / (2.0 * math.pi)
+
+    def calculate_positions(self, current_time, turn_offset=None):
         """
-        Calculates the target position for each motor at a given time `t` 
-        to produce a 2D lateral undulation (slithering) gait relying on friction anisotropy.
-        
-        mode: "SLITHER", "SLITHER_REV", "SLITHER_TURN"
-        
-        Returns a dictionary mapping motor index (1 to num_motors) to goal position.
+        Calculates the target position for each motor at time `current_time`.
+        Returns:
+            positions (dict): Motor ID (1 to num_motors) -> Goal position (0-4095)
+            angles (dict): Motor ID -> raw target angle in radians (for simulation)
         """
         positions = {}
+        angles = {}
         
-        # Determine wave direction and turning bend based on the mode
-        wave_dir = 1
-        bend = 0
-        
-        if mode == "SLITHER_REV":
-            wave_dir = -1  # Invert time to slither backward
-        elif mode == "SLITHER_TURN":
-            wave_dir = 1   # Keep slithering forward, but add a bend to curve around the obstacle
-            bend = self.turn_offset 
+        if turn_offset is not None:
+            self.turn_offset = turn_offset
             
-        for i in range(1, self.num_motors + 1):
-            is_yaw = (i % 2 != 0)
+        for i in range(self.num_motors): 
+            # Exact formula from simulate.py
+            target_angle = (self.amplitude * math.sin(self.frequency * current_time - i * self.phase_shift)) + self.turn_offset
             
-            if is_yaw:
-                # Yaw joints get the lateral undulation sine wave
-                wave_phase = (wave_dir * self.frequency * current_time) - (i * self.phase_shift)
-                wave = self.amplitude * math.sin(wave_phase) + bend
-                pos = int(self.center_pos + wave)
-            else:
-                # Pitch joints stay flat against the ground
-                pos = self.center_pos
-                
-            # Clamp values to valid XL330 limits (0 - 4095)
-            positions[i] = max(0, min(4095, pos))
+            # Map radian angle to Dynamixel ticks
+            ticks = self.center_pos + int(target_angle * self.ticks_per_radian)
             
-        return positions
+            # Clamp to safe motor range (0 to 4095)
+            clamped_ticks = max(0, min(4095, ticks))
+            
+            motor_id = i + 1
+            positions[motor_id] = clamped_ticks
+            angles[motor_id] = target_angle
+            
+        return positions, angles

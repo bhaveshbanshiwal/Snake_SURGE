@@ -8,7 +8,6 @@ import sys
 physicsClient = p.connect(p.GUI)
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
-# Remove useless windows/panels and disable mouse-dragging physics
 p.configureDebugVisualizer(p.COV_ENABLE_RGB_BUFFER_PREVIEW, 0)
 p.configureDebugVisualizer(p.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 0)
 p.configureDebugVisualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 0)
@@ -28,10 +27,11 @@ for i in range(0, 81):
         else:
             p.addUserDebugLine([x, -2+y_offset, 0.01], [x, 2+y_offset, 0.01], [0.7, 0.7, 0.7], 1)
 
-# Load the snake URDF
+# Load the snake URDF with SELF-COLLISION enabled
 startPos = [0, 0, 0.05]
 startOrientation = p.getQuaternionFromEuler([0, 0, 0])
-snakeId = p.loadURDF("snake.urdf", startPos, startOrientation)
+# Using URDF_USE_SELF_COLLISION and EXCLUDE_PARENT so segments can't clip through each other, but adjacent segments don't glitch!
+snakeId = p.loadURDF("snake.urdf", startPos, startOrientation, flags=p.URDF_USE_SELF_COLLISION | p.URDF_USE_SELF_COLLISION_EXCLUDE_PARENT) 
 num_joints = p.getNumJoints(snakeId)
 
 # ==========================================
@@ -39,7 +39,6 @@ num_joints = p.getNumJoints(snakeId)
 # ==========================================
 pov_slider = p.addUserDebugParameter("POV (0:Follow, 1:Top, 2:Side, 3:Free)", 0, 3, 0)
 zoom_slider = p.addUserDebugParameter("Camera Zoom", 0.1, 10.0, 1.5)
-steering_joystick = p.addUserDebugParameter("Steer (Left <- 0 -> Right)", -1.0, 1.0, 0.0)
 amplitude_slider = p.addUserDebugParameter("Sine Amplitude", 0.1, 1.5, 0.8)
 frequency_slider = p.addUserDebugParameter("Sine Speed (Freq)", 0.1, 5.0, 2.0)
 phase_slider = p.addUserDebugParameter("Phase Lag", 0.1, 3.0, 1.0)
@@ -58,12 +57,13 @@ t = 0
 last_pos = startPos
 last_head_trace_pos = None
 last_tail_trace_pos = None
+turn_offset = 0.0 # Stores current steering rotation
 
 speed_text_id = p.addUserDebugText("Speed: 0.00 m/s", [0,0,0.3], textColorRGB=[0,0,0], textSize=1.5)
 
 print("\n" + "="*60)
 print(" SNAKE SIMULATION TELEMETRY (Live Data)")
-print(" >> Steer using the 'Steer' slider, or your Left/Right arrow keys! <<")
+print(" >> Tap A / D keys to slowly steer! Steering stays constant! <<")
 print("="*60)
 
 try:
@@ -77,20 +77,20 @@ try:
         fric_ratio = p.readUserDebugParameter(friction_ratio_slider)
         pov_mode = int(p.readUserDebugParameter(pov_slider))
         zoom = p.readUserDebugParameter(zoom_slider) 
-        joystick_input = p.readUserDebugParameter(steering_joystick)
         
         update_friction(fric_ratio)
         
-        # KEYBOARD INPUT OVERRIDE
+        # KEYBOARD INPUT (A/D keys to adjust turn offset slowly)
         keys = p.getKeyboardEvents()
-        kb_steer = 0.0
+        steer_speed = 0.005 # Move it very slowly
+        
         if 97 in keys or p.B3G_LEFT_ARROW in keys:
-            kb_steer = 0.5
+            turn_offset += steer_speed
         if 100 in keys or p.B3G_RIGHT_ARROW in keys:
-            kb_steer = -0.5
+            turn_offset -= steer_speed
             
-        total_steer = joystick_input + kb_steer
-        turn_offset = max(-0.8, min(0.8, total_steer))
+        # Steer stays constant! No auto-straightening anymore.
+        turn_offset = max(-1.0, min(1.0, turn_offset))
         
         # 1. Apply Sinusoidal Motion + Steering
         for i in range(num_joints):
@@ -129,7 +129,7 @@ try:
             speed_text_id = p.addUserDebugText(f"Vel: {speed:.3f} m/s", [base_pos[0], base_pos[1], base_pos[2]+0.2], textColorRGB=[0,0,0], textSize=2.0, replaceItemUniqueId=speed_text_id)
             
             last_pos = base_pos
-            sys.stdout.write(f"\r[Speed: {speed:.3f} m/s] | Turn Offset: {turn_offset:.2f} | Lat/Fwd Ratio: {fric_ratio:.1f}   ")
+            sys.stdout.write(f"\r[Speed: {speed:.3f} m/s] | Turn: {turn_offset:.2f} | Lat/Fwd Ratio: {fric_ratio:.1f}   ")
             sys.stdout.flush()
             
         t += 1./240.
