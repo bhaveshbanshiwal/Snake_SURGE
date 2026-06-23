@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 import time
 import math
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from src.snake_locomotion import SnakeKinematics
 from src.path_engine import PathEngine
@@ -180,7 +181,7 @@ class SnakeDashboard(tk.Tk):
             self.btn_connect.config(text="Disconnect Engine")
             
     def compute_and_plot_accuracy(self):
-        """Computes path accuracy and plots the result using matplotlib."""
+        """Computes path accuracy and displays an embedded graph in a GUI popup."""
         if len(self.target_path) < 2 or len(self.actual_path) < 2:
             return
         
@@ -194,34 +195,41 @@ class SnakeDashboard(tk.Tk):
             total_error += min_dist
             
         avg_error = total_error / len(self.actual_path)
-        print(f"\n" + "="*40)
-        print(f" PATH TRACKING ACCURACY REPORT")
-        print(f" Average Deviation: {avg_error:.4f} meters")
-        print(f" Total Path Points Evaluated: {len(self.actual_path)}")
-        print("="*40 + "\n")
         
+        # Calculate a normalized Accuracy Percentage (assuming 0.5m average error = 0% accuracy)
+        accuracy_percent = max(0.0, 100.0 * (1.0 - (avg_error / 0.5)))
+        
+        report_win = tk.Toplevel(self)
+        report_win.title("Path Tracking Accuracy Report")
+        report_win.geometry("800x650")
+        
+        ttk.Label(report_win, text=f"Path Tracking Accuracy: {accuracy_percent:.1f}%", font=('Arial', 18, 'bold'), foreground="green" if accuracy_percent > 80 else "red").pack(pady=(15, 0))
+        ttk.Label(report_win, text=f"Average Deviation: {avg_error:.4f} meters", font=('Arial', 12)).pack(pady=(5, 10))
+        
+        fig, ax = plt.subplots(figsize=(7, 5))
         tx_vals = [p[0] for p in self.target_path]
         ty_vals = [p[1] for p in self.target_path]
         ax_vals = [p[0] for p in self.actual_path]
         ay_vals = [p[1] for p in self.actual_path]
         
-        plt.figure("Snake SURGE - Path Accuracy Report")
-        plt.plot(tx_vals, ty_vals, 'b-', label='Target Path', linewidth=2)
-        plt.plot(ax_vals, ay_vals, 'm-', label='Actual Path', linewidth=2)
-        plt.title(f"Path Tracking Accuracy\nAvg Deviation: {avg_error:.4f}m")
-        plt.xlabel("World X (meters)")
-        plt.ylabel("World Y (meters)")
-        plt.legend()
-        plt.grid(True)
-        plt.axis('equal')
-        plt.show()
+        ax.plot(tx_vals, ty_vals, 'b-', label='Target Path', linewidth=2)
+        ax.plot(ax_vals, ay_vals, 'm-', label='Actual Path', linewidth=2)
+        ax.set_title("Target vs Actual Path Tracking")
+        ax.set_xlabel("World X (meters)")
+        ax.set_ylabel("World Y (meters)")
+        ax.legend()
+        ax.grid(True)
+        ax.axis('equal')
+        
+        canvas = FigureCanvasTkAgg(fig, master=report_win)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
     def on_close(self):
-        """Handles application shutdown and plots accuracy graph if applicable."""
+        """Handles application shutdown."""
         self.is_running = False
         if self.active_iface:
             self.active_iface.disconnect()
-        self.compute_and_plot_accuracy()
         self.destroy()
 
     def render_canvas(self, turn_offset):
@@ -291,6 +299,15 @@ class SnakeDashboard(tk.Tk):
                         self.sim_iface.update_physics(sliders['fric'], sliders['pov'], sliders['zoom'], [self.robot_x, self.robot_y, 0])
                 
                 self.actual_path.append((self.robot_x, self.robot_y))
+                
+                # Check for Auto-Stop
+                if len(self.target_path) > 1:
+                    end_x, end_y = self.target_path[-1]
+                    dist_to_end = math.hypot(self.robot_x - end_x, self.robot_y - end_y)
+                    if dist_to_end < 0.4:
+                        print("Reached Target Path End. Auto-Stopping and Generating Report...")
+                        self.toggle_connection()
+                        return
                 
                 turn_offset = self.path_engine.calculate_pure_pursuit(self.robot_x, self.robot_y, self.robot_yaw, self.target_path)
                 positions, angles = self.kinematics.calculate_positions(curr_time, turn_offset)
