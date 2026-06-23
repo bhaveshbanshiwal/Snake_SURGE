@@ -46,9 +46,10 @@ If you are running the `python app.py --gui` command from your laptop but the co
 
 ### Option B: X11 Forwarding over SSH (Faster, no desktop needed)
 1. Install an X-Server on your laptop (e.g., **VcXsrv** for Windows, **XQuartz** for Mac).
-2. Connect to your Pi using SSH with the `-X` flag: 
+2. Open **PowerShell** and connect to your Pi using the `-X` flag:
    ```bash
    ssh -X smartsnake@snakerobo.local
    ```
+   *(If it asks for a fingerprint, type `yes`. When prompted for the password, type `xyz@1234`)*
 3. Run `python app.py --gui`. The Tkinter window will forward over WiFi and appear directly on your laptop screen!
 > **Note:** PyBullet's 3D engine (`Simulation Mode`) requires heavy OpenGL and will likely crash over X11 forwarding. It is highly recommended to only use **Hardware Mode** when operating the Pi remotely over SSH!
