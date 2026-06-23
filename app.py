@@ -340,7 +340,59 @@ class SnakeDashboard(tk.Tk):
                     
         self.render_canvas(turn_offset)
         self.after(50, self.update_loop)
+
+def run_headless(use_sim=False):
+    """Runs the snake in a headless mode (no GUI), tracking a straight line."""
+    print("="*50)
+    print(" Snake SURGE - Headless Mode (Straight Line)")
+    print("="*50)
+    
+    if use_sim:
+        iface = SimulationInterface()
+        print("Starting Simulation Engine...")
+    else:
+        iface = DynamixelInterface(port='COM3')
+        print("Starting Hardware Engine on COM3...")
         
+    connected, msg = iface.connect()
+    if not connected:
+        print(f"FATAL ERROR: {msg}")
+        return
+        
+    print("Engine Connected. Running... (Press Ctrl+C to Stop)")
+    
+    kinematics = SnakeKinematics()
+    path_engine = PathEngine()
+    target_path = [(x * 0.5, 0) for x in range(200)] # Straight line along X
+    
+    start_time = time.time()
+    try:
+        while True:
+            curr_time = time.time() - start_time
+            if use_sim:
+                rx, ry, ryaw = iface.get_robot_pose()
+                turn = path_engine.calculate_pure_pursuit(rx, ry, ryaw, target_path)
+                pos, ang = kinematics.calculate_positions(curr_time, turn)
+                iface.write_positions(ang)
+            else:
+                pos, ang = kinematics.calculate_positions(curr_time, 0.0)
+                iface.write_positions(pos)
+            time.sleep(0.02)
+    except KeyboardInterrupt:
+        print("\nEmergency Stop Triggered by User.")
+    finally:
+        iface.disconnect()
+        print("Hardware Safely Shutdown.")
+
 if __name__ == "__main__":
-    app = SnakeDashboard()
-    app.mainloop()
+    import argparse
+    parser = argparse.ArgumentParser(description="Snake SURGE Unified Control")
+    parser.add_argument('--gui', action='store_true', help="Launch the Tkinter Dashboard GUI")
+    parser.add_argument('--sim', action='store_true', help="Use PyBullet simulation instead of Hardware in headless mode")
+    args = parser.parse_args()
+
+    if args.gui:
+        app = SnakeDashboard()
+        app.mainloop()
+    else:
+        run_headless(use_sim=args.sim)
