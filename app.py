@@ -157,7 +157,10 @@ class SnakeDashboard(tk.Tk):
         """Toggles the hardware or simulation engine connection."""
         if self.is_running:
             self.is_running = False
-            if self.active_iface: self.active_iface.disconnect()
+            try:
+                if self.active_iface: self.active_iface.disconnect()
+            except Exception:
+                pass
             self.btn_connect.config(text="Connect Engine")
             self.status_var.set("Status: Disconnected")
             self.compute_and_plot_accuracy()
@@ -228,8 +231,11 @@ class SnakeDashboard(tk.Tk):
     def on_close(self):
         """Handles application shutdown."""
         self.is_running = False
-        if self.active_iface:
-            self.active_iface.disconnect()
+        try:
+            if self.active_iface:
+                self.active_iface.disconnect()
+        except Exception:
+            pass
         self.destroy()
 
     def render_canvas(self, turn_offset):
