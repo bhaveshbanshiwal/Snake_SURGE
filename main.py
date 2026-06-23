@@ -1,84 +1,35 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 import time
-import sys
-import os
-
-from dynamixel_sdk import *
-
+from src.dynamixel_interface import DynamixelInterface
 from src.snake_locomotion import SnakeKinematics
-from src.obstacle_avoidance import ObstacleAvoidance
 
-if sys.platform.startswith('win'):
-    DEVICENAME          = 'COM3'
-else:
-    DEVICENAME          = '/dev/ttyUSB0'  
-BAUDRATE            = 57600
-PROTOCOL_VERSION    = 2.0
-
-NUM_MOTORS          = 10  
-
-ADDR_TORQUE_ENABLE      = 64
-ADDR_GOAL_POSITION      = 116
-ADDR_PRESENT_CURRENT    = 126
-
-def init_motors(packetHandler, portHandler):
-    for dxl_id in range(1, NUM_MOTORS + 1):
-        dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, dxl_id, ADDR_TORQUE_ENABLE, 1)
-        if dxl_comm_result != COMM_SUCCESS:
-            print(f"Failed to enable torque for motor {dxl_id}. Is it connected?")
-        else:
-            print(f"Torque enabled for motor {dxl_id}")
-
-def disable_motors(packetHandler, portHandler):
-    for dxl_id in range(1, NUM_MOTORS + 1):
-        packetHandler.write1ByteTxRx(portHandler, dxl_id, ADDR_TORQUE_ENABLE, 0)
-
-def main():
-    print("--- SURGE-SNAKE Initializing ---")
+def run_hardware():
+    """Initializes hardware and runs a continuous sine wave loop on Dynamixels."""
+    print("Initializing Snake SURGE Hardware Engine...")
     
-    portHandler = PortHandler(DEVICENAME)
-    packetHandler = PacketHandler(PROTOCOL_VERSION)
+    hardware = DynamixelInterface(num_motors=10, port='COM3', baudrate=57600)
+    connected, msg = hardware.connect()
     
-    if not portHandler.openPort() or not portHandler.setBaudRate(BAUDRATE):
-        print("Failed to open port. Check connection and COM port.")
+    if not connected:
+        print(f"HARDWARE ERROR: {msg}")
         return
 
-    init_motors(packetHandler, portHandler)
-    
-    kinematics = SnakeKinematics(num_motors=NUM_MOTORS)
-    avoidance = ObstacleAvoidance(current_threshold=350)
-    
+    print("Hardware Connected. Torque Enabled.")
+    print("WARNING: Snake is active. Press Ctrl+C to emergency stop.")
+
+    kinematics = SnakeKinematics(num_motors=10)
     start_time = time.time()
     
-    print("\nStarting Main Control Loop. Press Ctrl+C to stop.")
     try:
         while True:
             current_time = time.time() - start_time
-            
-            motor_currents = {}
-            for dxl_id in range(1, NUM_MOTORS + 1):
-                cur, _, _ = packetHandler.read2ByteTxRx(portHandler, dxl_id, ADDR_PRESENT_CURRENT)
-                if cur > 32767:
-                    cur -= 65536
-                motor_currents[dxl_id] = cur
-                
-            current_state = avoidance.process_state(current_time, motor_currents)
-            
-            target_positions = kinematics.calculate_positions(current_time, mode=current_state)
-                
-            for dxl_id, pos in target_positions.items():
-                packetHandler.write4ByteTxRx(portHandler, dxl_id, ADDR_GOAL_POSITION, pos)
-                
-            time.sleep(0.02)
-            
-    except KeyboardInterrupt:
-        print("\nHalting Snake...")
-    finally:
-        disable_motors(packetHandler, portHandler)
-        portHandler.closePort()
-        print("Shutdown complete.")
+            positions, _ = kinematics.calculate_positions(current_time)
+            hardware.write_positions(positions)
+            time.sleep(0.01)
 
-if __name__ == '__main__':
-    main()
+    except KeyboardInterrupt:
+        print("\nEmergency Stop Triggered.")
+        hardware.disconnect()
+        print("Hardware Shutdown Safely.")
+
+if __name__ == "__main__":
+    run_hardware()
