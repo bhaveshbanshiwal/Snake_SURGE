@@ -195,19 +195,18 @@ class SimulationInterface:
             self.is_connected = False
             return {}
 
-         d e f   g e t _ 3 d _ s t a t e ( s e l f ) : 
-                 " " " R e t u r n s   3 D   X Y Z   a n d   Q u a t e r n i o n   o f   a l l   s e g m e n t s   f o r   T h r e e . j s " " " 
-                 i f   n o t   s e l f . i s _ c o n n e c t e d :   r e t u r n   [ ] 
-                 s e g m e n t s _ 3 d   =   [ ] 
-                 t r y : 
-                         p o s ,   o r n   =   p . g e t B a s e P o s i t i o n A n d O r i e n t a t i o n ( s e l f . s n a k e _ i d ) 
-                         s e g m e n t s _ 3 d . a p p e n d ( { " p o s " :   p o s ,   " q u a t " :   o r n } ) 
-                         n u m _ j   =   p . g e t N u m J o i n t s ( s e l f . s n a k e _ i d ) 
-                         f o r   i   i n   r a n g e ( n u m _ j ) : 
-                                 s t a t e   =   p . g e t L i n k S t a t e ( s e l f . s n a k e _ i d ,   i ) 
-                                 s e g m e n t s _ 3 d . a p p e n d ( { " p o s " :   s t a t e [ 0 ] ,   " q u a t " :   s t a t e [ 1 ] } ) 
-                         r e t u r n   s e g m e n t s _ 3 d 
-                 e x c e p t   p . e r r o r : 
-                         s e l f . i s _ c o n n e c t e d   =   F a l s e 
-                         r e t u r n   [ ]  
- 
+    def get_3d_state(self):
+        """Returns 3D XYZ and Quaternion of all segments for Three.js"""
+        if not self.is_connected: return []
+        segments_3d = []
+        try:
+            pos, orn = p.getBasePositionAndOrientation(self.snake_id)
+            segments_3d.append({"pos": pos, "quat": orn})
+            num_j = p.getNumJoints(self.snake_id)
+            for i in range(num_j):
+                state = p.getLinkState(self.snake_id, i)
+                segments_3d.append({"pos": state[0], "quat": state[1]})
+            return segments_3d
+        except p.error:
+            self.is_connected = False
+            return []
