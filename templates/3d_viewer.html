@@ -27,7 +27,7 @@
         scene.background = new THREE.Color(0x222222);
         
         // Setup Camera
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 100);
         camera.position.set(0, 1.5, 2);
         
         // Setup Renderer
@@ -56,12 +56,14 @@
         scene.add(gridHelper);
         
         // Setup Paths
-        const targetMaterial = new THREE.LineBasicMaterial({ color: 0x0088ff, linewidth: 2 });
+        const targetMaterial = new THREE.LineBasicMaterial({ color: 0x0088ff, linewidth: 2, depthTest: false });
         const targetLine = new THREE.Line(new THREE.BufferGeometry(), targetMaterial);
+        targetLine.renderOrder = 1;
         scene.add(targetLine);
         
-        const actualMaterial = new THREE.LineBasicMaterial({ color: 0xff3333, linewidth: 2 });
+        const actualMaterial = new THREE.LineBasicMaterial({ color: 0xff3333, linewidth: 2, depthTest: false });
         const actualLine = new THREE.Line(new THREE.BufferGeometry(), actualMaterial);
+        actualLine.renderOrder = 2;
         scene.add(actualLine);
 
         function updatePath(lineObj, pathData) {

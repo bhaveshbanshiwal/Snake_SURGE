@@ -81,6 +81,23 @@
                     <button id="btn-generate" class="btn-secondary">Generate Path</button>
                 </section>
 
+                <section class="card">
+                    <h2>Manual Draw</h2>
+                    <p class="help-text">Click and drag on the canvas to trace a custom path for the robot.</p>
+                    <button id="btn-clear" class="btn-danger">Clear Canvas</button>
+                </section>
+            </aside>
+
+            <!-- Center Panel: Canvas -->
+            <main class="canvas-container card">
+                <h2>Live Trajectory Tracking</h2>
+                <div class="canvas-wrapper">
+                    <canvas id="pathCanvas" width="700" height="500"></canvas>
+                </div>
+            </main>
+
+            <!-- Right Panel: Sim Controls -->
+            <aside class="control-panel right">
                 <section class="card" id="sim-controls-card">
                     <h2>Simulation Controls</h2>
                     <div class="input-group">
@@ -105,21 +122,7 @@
                     </div>
                     <button id="btn-open-3d" class="btn-secondary" style="margin-top: 15px; width: 100%;">Open 3D Viewer 🌐</button>
                 </section>
-
-                <section class="card">
-                    <h2>Manual Draw</h2>
-                    <p class="help-text">Click and drag on the canvas to trace a custom path for the robot.</p>
-                    <button id="btn-clear" class="btn-danger">Clear Canvas</button>
-                </section>
             </aside>
-
-            <!-- Center Panel: Canvas -->
-            <main class="canvas-container card">
-                <h2>Live Trajectory Tracking</h2>
-                <div class="canvas-wrapper">
-                    <canvas id="pathCanvas" width="700" height="500"></canvas>
-                </div>
-            </main>
         </div>
         
         <!-- Bottom Panel: Telemetry -->
