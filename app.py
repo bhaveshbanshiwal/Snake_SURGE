@@ -9,6 +9,7 @@ from src.snake_locomotion import SnakeKinematics
 from src.path_engine import PathEngine
 from src.simulation_interface import SimulationInterface
 from src.dynamixel_interface import DynamixelInterface
+from src.esp32_sg90.esp32_interface import DynamixelInterface as ESP32Interface
 
 class SnakeDashboard(tk.Tk):
     """Main GUI Application for controlling the Snake SURGE robot."""
@@ -20,7 +21,8 @@ class SnakeDashboard(tk.Tk):
         self.kinematics = SnakeKinematics()
         self.path_engine = PathEngine()
         self.sim_iface = SimulationInterface()
-        self.hw_iface = DynamixelInterface(port='COM3')
+        self.dxl_iface = DynamixelInterface(port='COM3')
+        self.esp_iface = ESP32Interface(port='COM3')
         
         self.active_iface = None
         self.target_path = []
@@ -46,8 +48,9 @@ class SnakeDashboard(tk.Tk):
         control_frame.pack(fill=tk.X, padx=10, pady=5)
         
         self.mode_var = tk.StringVar(value="SIM")
-        ttk.Radiobutton(control_frame, text="Simulation (PyBullet 3D Engine)", variable=self.mode_var, value="SIM").pack(side=tk.LEFT, padx=10, pady=5)
-        ttk.Radiobutton(control_frame, text="Hardware (Dynamixel COM3)", variable=self.mode_var, value="HW").pack(side=tk.LEFT, padx=10, pady=5)
+        ttk.Radiobutton(control_frame, text="Simulation (PyBullet)", variable=self.mode_var, value="SIM").pack(side=tk.LEFT, padx=10, pady=5)
+        ttk.Radiobutton(control_frame, text="Hardware (Dynamixel COM3)", variable=self.mode_var, value="DXL").pack(side=tk.LEFT, padx=10, pady=5)
+        ttk.Radiobutton(control_frame, text="Hardware (ESP32 SG90 COM3)", variable=self.mode_var, value="ESP").pack(side=tk.LEFT, padx=10, pady=5)
         
         self.btn_connect = ttk.Button(control_frame, text="Connect Engine", command=self.toggle_connection)
         self.btn_connect.pack(side=tk.LEFT, padx=20)
@@ -168,8 +171,10 @@ class SnakeDashboard(tk.Tk):
             
         if self.mode_var.get() == "SIM":
             self.active_iface = self.sim_iface
-        else:
-            self.active_iface = self.hw_iface
+        elif self.mode_var.get() == "DXL":
+            self.active_iface = self.dxl_iface
+        elif self.mode_var.get() == "ESP":
+            self.active_iface = self.esp_iface
             
         self.status_var.set("Status: Connecting...")
         self.update_idletasks()
