@@ -1,9 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('pathCanvas');
     const ctx = canvas.getContext('2d');
-    const PIXELS_PER_METER = 50.0;
     const CANVAS_CX = canvas.width / 2;
     const CANVAS_CY = canvas.height / 2;
+
+    let pixelsPerMeter = 50.0;
+    let panX = 0;
+    let panY = 0;
 
     let targetPath = [];
     let actualPath = [];
@@ -11,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let segments = [];
     
     let isDrawing = false;
+    let isPanning = false;
     let isRunning = false;
 
     // --- System Stats Polling ---
@@ -75,11 +79,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Controls ---
     document.getElementById('btn-connect').addEventListener('click', async () => {
         const engine = document.querySelector('input[name="engine"]:checked').value;
+        const wasRunning = isRunning;
+        
         await fetch('/api/connect', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({engine: engine})
         });
+
+        if (wasRunning) {
+            setTimeout(fetchAndShowReport, 300);
+        }
     });
 
     document.getElementById('btn-clear').addEventListener('click', async () => {
@@ -88,6 +98,54 @@ document.addEventListener('DOMContentLoaded', () => {
         await sendPath();
         renderCanvas();
     });
+
+    document.getElementById('btn-close-modal').addEventListener('click', () => {
+        document.getElementById('accuracy-modal').style.display = 'none';
+    });
+
+    async function fetchAndShowReport() {
+        try {
+            const res = await fetch('/api/report');
+            const data = await res.json();
+            if (data.error) return;
+
+            document.getElementById('report-accuracy').textContent = `${data.accuracy_percent.toFixed(1)}%`;
+            document.getElementById('report-accuracy').className = data.accuracy_percent > 80 ? 'value good' : 'value bad';
+            document.getElementById('report-deviation').textContent = `${data.avg_error.toFixed(4)} m`;
+
+            const rCanvas = document.getElementById('reportCanvas');
+            const rCtx = rCanvas.getContext('2d');
+            rCtx.clearRect(0, 0, rCanvas.width, rCanvas.height);
+            
+            const cx = rCanvas.width / 2;
+            const cy = rCanvas.height / 2;
+            const rPpm = 30.0; // Fixed scale for report
+            
+            rCtx.strokeStyle = '#00f0ff';
+            rCtx.lineWidth = 3;
+            rCtx.beginPath();
+            for (let i = 0; i < data.target_path.length; i++) {
+                const px = cx + (data.target_path[i][0] * rPpm);
+                const py = cy - (data.target_path[i][1] * rPpm);
+                if (i === 0) rCtx.moveTo(px, py); else rCtx.lineTo(px, py);
+            }
+            rCtx.stroke();
+
+            rCtx.strokeStyle = '#ff007f';
+            rCtx.lineWidth = 2;
+            rCtx.beginPath();
+            for (let i = 0; i < data.actual_path.length; i++) {
+                const px = cx + (data.actual_path[i][0] * rPpm);
+                const py = cy - (data.actual_path[i][1] * rPpm);
+                if (i === 0) rCtx.moveTo(px, py); else rCtx.lineTo(px, py);
+            }
+            rCtx.stroke();
+
+            document.getElementById('accuracy-modal').style.display = 'flex';
+        } catch (e) {
+            console.error('Report error:', e);
+        }
+    }
 
     document.getElementById('btn-generate').addEventListener('click', async () => {
         const funcStr = document.getElementById('math-func').value;
@@ -122,19 +180,47 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Canvas Drawing ---
+    // --- Canvas Drawing & Pan/Zoom ---
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+
     canvas.addEventListener('mousedown', (e) => {
+        if (e.button === 2 || e.button === 1) { // Right or Middle click
+            isPanning = true;
+            return;
+        }
         isDrawing = true;
         addPoint(e);
     });
 
     canvas.addEventListener('mousemove', (e) => {
+        if (isPanning) {
+            panX += e.movementX;
+            panY += e.movementY;
+            renderCanvas();
+            return;
+        }
         if (isDrawing) addPoint(e);
     });
 
-    canvas.addEventListener('mouseup', async () => {
+    canvas.addEventListener('mouseup', async (e) => {
+        if (e.button === 2 || e.button === 1) {
+            isPanning = false;
+            return;
+        }
         isDrawing = false;
         await sendPath();
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const zoomSpeed = 1.1;
+        if (e.deltaY < 0) {
+            pixelsPerMeter *= zoomSpeed;
+        } else {
+            pixelsPerMeter /= zoomSpeed;
+        }
+        pixelsPerMeter = Math.max(5, Math.min(pixelsPerMeter, 200));
+        renderCanvas();
     });
 
     function addPoint(e) {
@@ -142,8 +228,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
         
-        const worldX = (mouseX - CANVAS_CX) / PIXELS_PER_METER;
-        const worldY = (CANVAS_CY - mouseY) / PIXELS_PER_METER;
+        const worldX = (mouseX - CANVAS_CX - panX) / pixelsPerMeter;
+        const worldY = (CANVAS_CY + panY - mouseY) / pixelsPerMeter;
         
         targetPath.push([worldX, worldY]);
         renderCanvas();
@@ -156,10 +242,14 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.strokeStyle = '#333';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        for (let x = 0; x <= canvas.width; x += PIXELS_PER_METER) {
+        let startX = (panX + CANVAS_CX) % pixelsPerMeter;
+        if (startX < 0) startX += pixelsPerMeter;
+        for (let x = startX; x <= canvas.width; x += pixelsPerMeter) {
             ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height);
         }
-        for (let y = 0; y <= canvas.height; y += PIXELS_PER_METER) {
+        let startY = (panY + CANVAS_CY) % pixelsPerMeter;
+        if (startY < 0) startY += pixelsPerMeter;
+        for (let y = startY; y <= canvas.height; y += pixelsPerMeter) {
             ctx.moveTo(0, y); ctx.lineTo(canvas.width, y);
         }
         ctx.stroke();
@@ -169,8 +259,8 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.lineWidth = 2;
         ctx.setLineDash([5, 5]);
         ctx.beginPath();
-        ctx.moveTo(CANVAS_CX, 0); ctx.lineTo(CANVAS_CX, canvas.height);
-        ctx.moveTo(0, CANVAS_CY); ctx.lineTo(canvas.width, CANVAS_CY);
+        ctx.moveTo(CANVAS_CX + panX, 0); ctx.lineTo(CANVAS_CX + panX, canvas.height);
+        ctx.moveTo(0, CANVAS_CY + panY); ctx.lineTo(canvas.width, CANVAS_CY + panY);
         ctx.stroke();
         ctx.setLineDash([]);
 
@@ -180,8 +270,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.lineWidth = 3;
             ctx.beginPath();
             for (let i = 0; i < targetPath.length; i++) {
-                const px = CANVAS_CX + (targetPath[i][0] * PIXELS_PER_METER);
-                const py = CANVAS_CY - (targetPath[i][1] * PIXELS_PER_METER);
+                const px = CANVAS_CX + panX + (targetPath[i][0] * pixelsPerMeter);
+                const py = CANVAS_CY + panY - (targetPath[i][1] * pixelsPerMeter);
                 if (i === 0) ctx.moveTo(px, py);
                 else ctx.lineTo(px, py);
             }
@@ -194,8 +284,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.lineWidth = 2;
             ctx.beginPath();
             for (let i = 0; i < actualPath.length; i++) {
-                const px = CANVAS_CX + (actualPath[i][0] * PIXELS_PER_METER);
-                const py = CANVAS_CY - (actualPath[i][1] * PIXELS_PER_METER);
+                const px = CANVAS_CX + panX + (actualPath[i][0] * pixelsPerMeter);
+                const py = CANVAS_CY + panY - (actualPath[i][1] * pixelsPerMeter);
                 if (i === 0) ctx.moveTo(px, py);
                 else ctx.lineTo(px, py);
             }
@@ -210,8 +300,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.lineJoin = 'round';
             ctx.beginPath();
             for (let i = 0; i < segments.length; i++) {
-                const px = CANVAS_CX + (segments[i][0] * PIXELS_PER_METER);
-                const py = CANVAS_CY - (segments[i][1] * PIXELS_PER_METER);
+                const px = CANVAS_CX + panX + (segments[i][0] * pixelsPerMeter);
+                const py = CANVAS_CY + panY - (segments[i][1] * pixelsPerMeter);
                 if (i === 0) ctx.moveTo(px, py);
                 else ctx.lineTo(px, py);
             }
@@ -220,8 +310,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Draw Robot Position (Red Dot)
-        const rx = CANVAS_CX + (robotPose.x * PIXELS_PER_METER);
-        const ry = CANVAS_CY - (robotPose.y * PIXELS_PER_METER);
+        const rx = CANVAS_CX + panX + (robotPose.x * pixelsPerMeter);
+        const ry = CANVAS_CY + panY - (robotPose.y * pixelsPerMeter);
         ctx.fillStyle = '#ff4040';
         ctx.beginPath();
         ctx.arc(rx, ry, 6, 0, Math.PI * 2);

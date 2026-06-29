@@ -177,5 +177,32 @@ def get_system_stats():
         'temp': temp
     })
 
+@app.route('/api/report', methods=['GET'])
+def get_report():
+    target = state['target_path']
+    actual = state['actual_path']
+    
+    if len(target) < 2 or len(actual) < 2:
+        return jsonify({'error': 'Not enough data'})
+        
+    total_error = 0.0
+    for ax, ay in actual:
+        min_dist = float('inf')
+        for tx, ty in target:
+            dist = math.hypot(ax - tx, ay - ty)
+            if dist < min_dist:
+                min_dist = dist
+        total_error += min_dist
+        
+    avg_error = total_error / len(actual)
+    accuracy_percent = max(0.0, 100.0 * (1.0 - (avg_error / 0.5)))
+    
+    return jsonify({
+        'avg_error': avg_error,
+        'accuracy_percent': accuracy_percent,
+        'target_path': target,
+        'actual_path': actual
+    })
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)

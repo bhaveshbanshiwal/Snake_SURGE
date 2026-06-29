@@ -100,6 +100,27 @@
                 <!-- Dynamically populated by JS -->
             </div>
         </footer>
+
+        <!-- Accuracy Report Modal -->
+        <div id="accuracy-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-content card">
+                <h2>Path Tracking Accuracy Report</h2>
+                <div class="report-stats">
+                    <div class="stat">
+                        <span>Accuracy</span>
+                        <span id="report-accuracy" class="value">--%</span>
+                    </div>
+                    <div class="stat">
+                        <span>Avg Deviation</span>
+                        <span id="report-deviation" class="value">-- m</span>
+                    </div>
+                </div>
+                <div class="modal-canvas-wrapper">
+                    <canvas id="reportCanvas" width="600" height="400"></canvas>
+                </div>
+                <button id="btn-close-modal" class="btn-primary">Close Report</button>
+            </div>
+        </div>
     </div>
     <script src="/static/script.js"></script>
 </body>
