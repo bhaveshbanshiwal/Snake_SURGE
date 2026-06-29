@@ -51,7 +51,7 @@
         scene.add(dirLight);
         
         // Add Ground Plane (Checkerboard like PyBullet)
-        const gridHelper = new THREE.GridHelper(20, 40, 0x888888, 0x444444);
+        const gridHelper = new THREE.GridHelper(200, 400, 0x888888, 0x444444);
         gridHelper.position.y = 0;
         scene.add(gridHelper);
         
@@ -82,7 +82,9 @@
         
         // Snake Segments Array
         const segments = [];
-        
+        let previousHeadPos = new THREE.Vector3(0, 0, 0);
+        let firstFrame = true;
+
         // Helper to create a snake segment mesh
         function createSegmentMesh(isHead) {
             // URDF size roughly 40x40x80 mm
@@ -134,7 +136,17 @@
                     
                     // Optional: Make camera follow the head
                     if (segments.length > 0) {
-                        controls.target.copy(segments[0].position);
+                        const headPos = segments[0].position;
+                        
+                        if (!firstFrame) {
+                            const delta = new THREE.Vector3().subVectors(headPos, previousHeadPos);
+                            camera.position.add(delta);
+                        } else {
+                            firstFrame = false;
+                        }
+                        
+                        controls.target.copy(headPos);
+                        previousHeadPos.copy(headPos);
                     }
                     
                     // Update paths
