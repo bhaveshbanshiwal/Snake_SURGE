@@ -55,6 +55,27 @@
         gridHelper.position.y = 0;
         scene.add(gridHelper);
         
+        // Setup Paths
+        const targetMaterial = new THREE.LineBasicMaterial({ color: 0x0088ff, linewidth: 2 });
+        const targetLine = new THREE.Line(new THREE.BufferGeometry(), targetMaterial);
+        scene.add(targetLine);
+        
+        const actualMaterial = new THREE.LineBasicMaterial({ color: 0xff3333, linewidth: 2 });
+        const actualLine = new THREE.Line(new THREE.BufferGeometry(), actualMaterial);
+        scene.add(actualLine);
+
+        function updatePath(lineObj, pathData) {
+            if (!pathData || pathData.length < 2) {
+                lineObj.geometry.setFromPoints([]);
+                return;
+            }
+            const points = [];
+            for(let i=0; i<pathData.length; i++) {
+                points.push(new THREE.Vector3(pathData[i][0], 0.01, -pathData[i][1]));
+            }
+            lineObj.geometry.setFromPoints(points);
+        }
+        
         // Snake Segments Array
         const segments = [];
         
@@ -111,6 +132,10 @@
                     if (segments.length > 0) {
                         controls.target.copy(segments[0].position);
                     }
+                    
+                    // Update paths
+                    updatePath(targetLine, data.target_path);
+                    updatePath(actualLine, data.actual_path);
                 } else {
                     statusEl.textContent = "Waiting for Simulation...";
                     statusEl.style.color = "#ffaa00";

@@ -103,8 +103,12 @@ def viewer_3d():
 @app.route('/api/3d_status', methods=['GET'])
 def get_3d_status():
     if active_iface and state['engine'] == 'SIM':
-        return jsonify({'segments': active_iface.get_3d_state()})
-    return jsonify({'segments': []})
+        return jsonify({
+            'segments': active_iface.get_3d_state(),
+            'target_path': state['target_path'],
+            'actual_path': state['actual_path']
+        })
+    return jsonify({'segments': [], 'target_path': [], 'actual_path': []})
 
 @app.route('/api/connect', methods=['POST'])
 def connect_engine():
