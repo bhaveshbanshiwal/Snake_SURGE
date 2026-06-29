@@ -38,10 +38,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch('/api/status');
             const data = await res.json();
             
+            const wasRunning = isRunning;
             isRunning = data.is_running;
             document.getElementById('conn-status').textContent = data.status;
             document.getElementById('status-dot').className = isRunning ? 'dot active' : 'dot';
             document.getElementById('btn-connect').textContent = isRunning ? 'Disconnect Engine' : 'Connect Engine';
+
+            if (wasRunning && !isRunning && data.status === 'Path Complete') {
+                setTimeout(fetchAndShowReport, 300);
+            }
 
             robotPose = data.robot_pose;
             actualPath = data.actual_path;
@@ -254,6 +259,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         pixelsPerMeter = Math.max(5, Math.min(pixelsPerMeter, 200));
         renderCanvas();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        const step = 40; // pan speed
+        if (e.key === 'ArrowLeft') { panX += step; renderCanvas(); }
+        if (e.key === 'ArrowRight') { panX -= step; renderCanvas(); }
+        if (e.key === 'ArrowUp') { panY += step; renderCanvas(); }
+        if (e.key === 'ArrowDown') { panY -= step; renderCanvas(); }
     });
 
     function addPoint(e) {
