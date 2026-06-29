@@ -122,7 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
             amp: parseFloat(document.getElementById('param-amp').value),
             freq: parseFloat(document.getElementById('param-freq').value),
             phase: parseFloat(document.getElementById('param-phase').value),
-            force: parseFloat(document.getElementById('param-force').value)
+            force: parseFloat(document.getElementById('param-force').value),
+            speed: parseFloat(document.getElementById('param-speed').value)
         };
         try {
             await fetch('/api/params', {

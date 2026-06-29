@@ -33,10 +33,17 @@ start_time = 0
 
 def update_loop():
     global state, active_iface, start_time
+    last_time = time.time()
     while True:
         if state['is_running'] and active_iface:
             try:
-                curr_time = time.time() - start_time
+                curr_real = time.time()
+                dt = curr_real - last_time
+                last_time = curr_real
+                
+                speed = state['params'].get('speed', 1.0)
+                state['sim_time'] = state.get('sim_time', 0.0) + (dt * speed)
+                curr_time = state['sim_time']
                 
                 # Update Pose
                 if state['engine'] == "SIM":
@@ -85,7 +92,11 @@ def update_loop():
                 if active_iface:
                     active_iface.is_connected = False
                     
-        time.sleep(0.05) # 50ms loop
+        else:
+            last_time = time.time()
+            
+        sleep_time = max(0.005, 0.05 / state['params'].get('speed', 1.0)) if state.get('is_running') else 0.05
+        time.sleep(sleep_time)
 
 # Start background thread
 thread = threading.Thread(target=update_loop, daemon=True)
@@ -142,6 +153,7 @@ def connect_engine():
     
     if success:
         state['is_running'] = True
+        state['sim_time'] = 0.0
         start_time = time.time()
         state['actual_path'] = []
         state['status'] = f"Connected to {engine_type}"
@@ -154,7 +166,7 @@ def connect_engine():
 def set_params():
     global state, kinematics
     data = request.json
-    for k in ['fric', 'amp', 'freq', 'phase', 'force']:
+    for k in ['fric', 'amp', 'freq', 'phase', 'force', 'speed']:
         if k in data:
             state['params'][k] = float(data[k])
     
