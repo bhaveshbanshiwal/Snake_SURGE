@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let targetPath = [];
     let actualPath = [];
     let robotPose = {x: 0, y: 0, yaw: 0};
+    let segments = [];
     
     let isDrawing = false;
     let isRunning = false;
@@ -40,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             robotPose = data.robot_pose;
             actualPath = data.actual_path;
+            segments = data.segments || [];
             
             // Update Telemetry UI
             const grid = document.getElementById('telemetry-grid');
@@ -198,6 +200,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 else ctx.lineTo(px, py);
             }
             ctx.stroke();
+        }
+
+        // Draw Snake Segments (if available from SIM)
+        if (segments && segments.length > 1) {
+            ctx.strokeStyle = '#cc0000';
+            ctx.lineWidth = 12;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            for (let i = 0; i < segments.length; i++) {
+                const px = CANVAS_CX + (segments[i][0] * PIXELS_PER_METER);
+                const py = CANVAS_CY - (segments[i][1] * PIXELS_PER_METER);
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+            ctx.lineCap = 'butt'; // reset
         }
 
         // Draw Robot Position (Red Dot)

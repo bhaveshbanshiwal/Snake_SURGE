@@ -21,7 +21,8 @@ state = {
     'target_path': [],
     'actual_path': [],
     'telemetry': {},
-    'robot_pose': {'x': 0.0, 'y': 0.0, 'yaw': 0.0}
+    'robot_pose': {'x': 0.0, 'y': 0.0, 'yaw': 0.0},
+    'segments': []
 }
 
 active_iface = None
@@ -40,8 +41,10 @@ def update_loop():
                 if state['engine'] == "SIM":
                     rx, ry, ryaw = active_iface.get_robot_pose()
                     state['robot_pose'] = {'x': rx, 'y': ry, 'yaw': ryaw}
+                    state['segments'] = active_iface.get_all_segment_positions()
                 else:
                     rx, ry, ryaw = state['robot_pose']['x'], state['robot_pose']['y'], state['robot_pose']['yaw']
+                    state['segments'] = []
                     
                 # Store actual path for plotting
                 if len(state['actual_path']) == 0 or math.hypot(state['actual_path'][-1][0] - rx, state['actual_path'][-1][1] - ry) > 0.05:
@@ -149,6 +152,7 @@ def get_status():
         'engine': state['engine'],
         'robot_pose': state['robot_pose'],
         'telemetry': state['telemetry'],
+        'segments': state['segments'],
         'actual_path': state['actual_path'][-50:] 
     })
 
