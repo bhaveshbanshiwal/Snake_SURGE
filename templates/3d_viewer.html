@@ -147,6 +147,10 @@
                         
                         controls.target.copy(headPos);
                         previousHeadPos.copy(headPos);
+                        
+                        // Make grid strictly follow the snake, snapping to 0.5m grid lines
+                        gridHelper.position.x = Math.round(headPos.x / 0.5) * 0.5;
+                        gridHelper.position.z = Math.round(headPos.z / 0.5) * 0.5;
                     }
                     
                     // Update paths
