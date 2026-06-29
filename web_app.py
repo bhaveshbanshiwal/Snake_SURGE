@@ -118,7 +118,10 @@ def connect_engine():
         active_iface = ESP32Interface(port='COM3')
         
     state['status'] = 'Connecting...'
-    success, msg = active_iface.connect()
+    if engine_type == 'SIM':
+        success, msg = active_iface.connect(headless=True)
+    else:
+        success, msg = active_iface.connect()
     
     if success:
         state['is_running'] = True

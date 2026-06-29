@@ -16,30 +16,42 @@ class SimulationInterface:
         self.step_counter = 0
         self.target_path_ids = []
         
-    def connect(self):
-        """Initializes PyBullet GUI and loads the snake URDF."""
+    def connect(self, headless=False):
+        """Initializes PyBullet and loads the snake URDF. Uses DIRECT mode if headless."""
+        self.headless = headless
         try:
-            self.client_id = p.connect(p.GUI)
+            if headless:
+                self.client_id = p.connect(p.DIRECT)
+            else:
+                self.client_id = p.connect(p.GUI)
+                
             p.setAdditionalSearchPath(pybullet_data.getDataPath())
             p.setGravity(0, 0, -9.81)
-            p.configureDebugVisualizer(p.COV_ENABLE_GUI, 1)
+            
+            if not headless:
+                p.configureDebugVisualizer(p.COV_ENABLE_GUI, 1)
             p.loadURDF("plane.urdf")
-            for i in range(-20, 21): 
-                x = i * 0.5 
-                p.addUserDebugLine([x, -10, 0.01], [x, 10, 0.01], [0.8, 0.8, 0.8], 1)
-                p.addUserDebugLine([-10, x, 0.01], [10, x, 0.01], [0.8, 0.8, 0.8], 1)
-            p.addUserDebugLine([-10, 0, 0.02], [10, 0, 0.02], [0, 0, 0], 2)
-            p.addUserDebugLine([0, -10, 0.02], [0, 10, 0.02], [0, 0, 0], 2)
+            if not headless:
+                for i in range(-20, 21): 
+                    x = i * 0.5 
+                    p.addUserDebugLine([x, -10, 0.01], [x, 10, 0.01], [0.8, 0.8, 0.8], 1)
+                    p.addUserDebugLine([-10, x, 0.01], [10, x, 0.01], [0.8, 0.8, 0.8], 1)
+                p.addUserDebugLine([-10, 0, 0.02], [10, 0, 0.02], [0, 0, 0], 2)
+                p.addUserDebugLine([0, -10, 0.02], [0, 10, 0.02], [0, 0, 0], 2)
+                
             startPos = [0, 0, 0.05]
             startOrientation = p.getQuaternionFromEuler([0, 0, 0])
             self.snake_id = p.loadURDF("snake.urdf", startPos, startOrientation, flags=p.URDF_USE_SELF_COLLISION | p.URDF_USE_SELF_COLLISION_EXCLUDE_PARENT)
-            self.sliders['pov'] = p.addUserDebugParameter("POV (0:Follow, 1:Top, 2:Side)", 0, 2, 0)
-            self.sliders['zoom'] = p.addUserDebugParameter("Camera Zoom", 0.1, 10.0, 1.5)
-            self.sliders['amp'] = p.addUserDebugParameter("Sine Amplitude", 0.1, 1.5, 0.8)
-            self.sliders['freq'] = p.addUserDebugParameter("Sine Speed (Freq)", 0.1, 5.0, 2.0)
-            self.sliders['phase'] = p.addUserDebugParameter("Phase Lag", 0.1, 3.0, 1.0)
-            self.sliders['force'] = p.addUserDebugParameter("Max Motor Force", 0.1, 20.0, 5.0)
-            self.sliders['fric'] = p.addUserDebugParameter("Wheel Effect (Lat/Fwd)", 1.0, 50.0, 20.0)
+            
+            if not headless:
+                self.sliders['pov'] = p.addUserDebugParameter("POV (0:Follow, 1:Top, 2:Side)", 0, 2, 0)
+                self.sliders['zoom'] = p.addUserDebugParameter("Camera Zoom", 0.1, 10.0, 1.5)
+                self.sliders['amp'] = p.addUserDebugParameter("Sine Amplitude", 0.1, 1.5, 0.8)
+                self.sliders['freq'] = p.addUserDebugParameter("Sine Speed (Freq)", 0.1, 5.0, 2.0)
+                self.sliders['phase'] = p.addUserDebugParameter("Phase Lag", 0.1, 3.0, 1.0)
+                self.sliders['force'] = p.addUserDebugParameter("Max Motor Force", 0.1, 20.0, 5.0)
+                self.sliders['fric'] = p.addUserDebugParameter("Wheel Effect (Lat/Fwd)", 1.0, 50.0, 20.0)
+                
             self.is_connected = True
             return True, "Simulation Started Successfully"
         except Exception as e:
@@ -53,7 +65,7 @@ class SimulationInterface:
             
     def draw_target_path(self, path):
         """Draws the target blue path directly onto the PyBullet ground."""
-        if not self.is_connected: return
+        if not self.is_connected or getattr(self, 'headless', False): return
         try:
             for lid in self.target_path_ids:
                 p.removeUserDebugItem(lid)
@@ -70,6 +82,11 @@ class SimulationInterface:
     def read_sliders(self):
         """Reads user parameters from the PyBullet UI sliders."""
         if not self.is_connected: return {}
+        if getattr(self, 'headless', False):
+            return {
+                'pov': 0, 'zoom': 1.5, 'amp': 0.8, 'freq': 2.0, 
+                'phase': 1.0, 'force': 5.0, 'fric': 20.0
+            }
         try:
             return {
                 'pov': int(p.readUserDebugParameter(self.sliders['pov'])),
@@ -93,6 +110,10 @@ class SimulationInterface:
             num_j = p.getNumJoints(self.snake_id)
             for j in range(num_j):
                 p.changeDynamics(self.snake_id, j, lateralFriction=lateral_f, anisotropicFriction=[1.0/fric_ratio, 1, 1])
+                
+            if getattr(self, 'headless', False):
+                return  # Skip camera updates and debug lines in headless
+                
             if pov_mode == 0: 
                 p.resetDebugVisualizerCamera(cameraDistance=zoom, cameraYaw=45, cameraPitch=-30, cameraTargetPosition=base_pos)
             elif pov_mode == 1: 
