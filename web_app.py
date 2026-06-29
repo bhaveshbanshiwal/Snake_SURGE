@@ -22,7 +22,8 @@ state = {
     'actual_path': [],
     'telemetry': {},
     'robot_pose': {'x': 0.0, 'y': 0.0, 'yaw': 0.0},
-    'segments': []
+    'segments': [],
+    'params': {'fric': 20.0, 'amp': 0.8, 'freq': 2.0, 'phase': 1.0, 'force': 5.0}
 }
 
 active_iface = None
@@ -68,7 +69,8 @@ def update_loop():
                 
                 # Send to Hardware/Sim
                 if state['engine'] == "SIM":
-                    active_iface.write_positions(angles, 5.0)
+                    active_iface.update_physics(state['params']['fric'], 0, 1.5, [rx, ry, 0])
+                    active_iface.write_positions(angles, max_force=state['params']['force'])
                 else:
                     active_iface.write_positions(positions)
                     
@@ -93,6 +95,16 @@ thread.start()
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/3d')
+def viewer_3d():
+    return render_template('3d_viewer.html')
+
+@app.route('/api/3d_status', methods=['GET'])
+def get_3d_status():
+    if active_iface and state['engine'] == 'SIM':
+        return jsonify({'segments': active_iface.get_3d_state()})
+    return jsonify({'segments': []})
 
 @app.route('/api/connect', methods=['POST'])
 def connect_engine():
@@ -119,7 +131,8 @@ def connect_engine():
         
     state['status'] = 'Connecting...'
     if engine_type == 'SIM':
-        success, msg = active_iface.connect(headless=True)
+        headless_flag = data.get('headless', True)
+        success, msg = active_iface.connect(headless=headless_flag)
     else:
         success, msg = active_iface.connect()
     
@@ -132,6 +145,19 @@ def connect_engine():
         state['status'] = f"Failed: {msg}"
         
     return jsonify({'success': success, 'status': state['status']})
+
+@app.route('/api/params', methods=['POST'])
+def set_params():
+    global state, kinematics
+    data = request.json
+    for k in ['fric', 'amp', 'freq', 'phase', 'force']:
+        if k in data:
+            state['params'][k] = float(data[k])
+    
+    kinematics.amplitude = state['params']['amp']
+    kinematics.frequency = state['params']['freq']
+    kinematics.phase_shift = state['params']['phase']
+    return jsonify({'success': True})
 
 @app.route('/api/set_path', methods=['POST'])
 def set_path():

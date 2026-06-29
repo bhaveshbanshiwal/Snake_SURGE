@@ -49,6 +49,10 @@
                             <input type="radio" name="engine" value="SIM">
                             Simulation (PyBullet)
                         </label>
+                        <label style="margin-left: 20px; font-size: 0.85em; display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" id="sim-headless" checked>
+                            Run Headless (Fast)
+                        </label>
                     </div>
                     
                     <button id="btn-connect" class="btn-primary">Connect Engine</button>
@@ -75,6 +79,31 @@
                         </div>
                     </div>
                     <button id="btn-generate" class="btn-secondary">Generate Path</button>
+                </section>
+
+                <section class="card" id="sim-controls-card">
+                    <h2>Simulation Controls</h2>
+                    <div class="input-group">
+                        <label>Friction Wheel Ratio: <span id="val-fric">20.0</span></label>
+                        <input type="range" id="param-fric" class="sim-param" min="1" max="50" step="0.5" value="20.0">
+                    </div>
+                    <div class="input-group">
+                        <label>Sine Amplitude: <span id="val-amp">0.8</span></label>
+                        <input type="range" id="param-amp" class="sim-param" min="0.1" max="1.5" step="0.1" value="0.8">
+                    </div>
+                    <div class="input-group">
+                        <label>Sine Frequency: <span id="val-freq">2.0</span></label>
+                        <input type="range" id="param-freq" class="sim-param" min="0.1" max="5.0" step="0.1" value="2.0">
+                    </div>
+                    <div class="input-group">
+                        <label>Phase Lag: <span id="val-phase">1.0</span></label>
+                        <input type="range" id="param-phase" class="sim-param" min="0.1" max="3.0" step="0.1" value="1.0">
+                    </div>
+                    <div class="input-group">
+                        <label>Max Motor Force: <span id="val-force">5.0</span></label>
+                        <input type="range" id="param-force" class="sim-param" min="0.1" max="20.0" step="0.5" value="5.0">
+                    </div>
+                    <button id="btn-open-3d" class="btn-secondary" style="margin-top: 15px; width: 100%;">Open 3D Viewer 🌐</button>
                 </section>
 
                 <section class="card">

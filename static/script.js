@@ -79,12 +79,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Controls ---
     document.getElementById('btn-connect').addEventListener('click', async () => {
         const engine = document.querySelector('input[name="engine"]:checked').value;
+        const headless = document.getElementById('sim-headless').checked;
         const wasRunning = isRunning;
         
         await fetch('/api/connect', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({engine: engine})
+            body: JSON.stringify({engine: engine, headless: headless})
         });
 
         if (wasRunning) {
@@ -97,6 +98,38 @@ document.addEventListener('DOMContentLoaded', () => {
         actualPath = [];
         await sendPath();
         renderCanvas();
+    });
+
+    // --- Simulation Controls ---
+    const paramInputs = document.querySelectorAll('.sim-param');
+    paramInputs.forEach(input => {
+        input.addEventListener('input', (e) => {
+            const id = e.target.id;
+            const val = e.target.value;
+            document.getElementById(`val-${id.split('-')[1]}`).textContent = val;
+            sendParams();
+        });
+    });
+    
+    async function sendParams() {
+        const params = {
+            fric: parseFloat(document.getElementById('param-fric').value),
+            amp: parseFloat(document.getElementById('param-amp').value),
+            freq: parseFloat(document.getElementById('param-freq').value),
+            phase: parseFloat(document.getElementById('param-phase').value),
+            force: parseFloat(document.getElementById('param-force').value)
+        };
+        try {
+            await fetch('/api/params', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(params)
+            });
+        } catch(e){}
+    }
+
+    document.getElementById('btn-open-3d').addEventListener('click', () => {
+        window.open('/3d', 'Snake 3D Viewer', 'width=900,height=700');
     });
 
     document.getElementById('btn-close-modal').addEventListener('click', () => {
