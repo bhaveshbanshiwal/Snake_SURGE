@@ -20,8 +20,13 @@ class SnakeDashboard(tk.Tk):
         self.kinematics = SnakeKinematics()
         self.path_engine = PathEngine()
         self.sim_iface = SimulationInterface()
+        import serial.tools.list_ports
         import platform
         default_port = 'COM12' if platform.system() == 'Windows' else '/dev/ttyUSB0'
+        for p in serial.tools.list_ports.comports():
+            if 'AMA' not in p.device and 'Bluetooth' not in p.description:
+                default_port = p.device
+                break
         self.st3215_iface = ST3215Interface(port=default_port)
         
         self.active_iface = None
@@ -49,9 +54,7 @@ class SnakeDashboard(tk.Tk):
         
         self.mode_var = tk.StringVar(value="SIM")
         ttk.Radiobutton(control_frame, text="Simulation (PyBullet)", variable=self.mode_var, value="SIM").pack(side=tk.LEFT, padx=10, pady=5)
-        import platform
-        port_label = 'COM12' if platform.system() == 'Windows' else '/dev/ttyUSB0'
-        ttk.Radiobutton(control_frame, text=f"Hardware (ST3215 via ESP32 {port_label})", variable=self.mode_var, value="ST3215").pack(side=tk.LEFT, padx=10, pady=5)
+        ttk.Radiobutton(control_frame, text=f"Hardware (ST3215 via ESP32 auto-detect)", variable=self.mode_var, value="ST3215").pack(side=tk.LEFT, padx=10, pady=5)
         
         self.btn_connect = ttk.Button(control_frame, text="Connect Engine", command=self.toggle_connection)
         self.btn_connect.pack(side=tk.LEFT, padx=20)
@@ -354,9 +357,13 @@ def run_headless(use_sim=False):
     if use_sim:
         iface = SimulationInterface()
         print("Starting Simulation Engine...")
-    else:
+        import serial.tools.list_ports
         import platform
         default_port = 'COM12' if platform.system() == 'Windows' else '/dev/ttyUSB0'
+        for p in serial.tools.list_ports.comports():
+            if 'AMA' not in p.device and 'Bluetooth' not in p.description:
+                default_port = p.device
+                break
         iface = ST3215Interface(port=default_port)
         print(f"Starting ST3215 Hardware Engine on {default_port}...")
         

@@ -139,8 +139,13 @@ def connect_engine():
     if engine_type == 'SIM':
         active_iface = SimulationInterface()
     elif engine_type == 'ST3215':
+        import serial.tools.list_ports
         import platform
         default_port = 'COM12' if platform.system() == 'Windows' else '/dev/ttyUSB0'
+        for p in serial.tools.list_ports.comports():
+            if 'AMA' not in p.device and 'Bluetooth' not in p.description:
+                default_port = p.device
+                break
         active_iface = ST3215Interface(port=default_port)
         
     state['status'] = 'Connecting...'
