@@ -8,15 +8,14 @@ from flask import Flask, request, jsonify, render_template
 from src.snake_locomotion import SnakeKinematics
 from src.path_engine import PathEngine
 from src.simulation_interface import SimulationInterface
-from src.dynamixel_interface import DynamixelInterface
-from src.esp32_sg90.esp32_interface import DynamixelInterface as ESP32Interface
+from src.st3215_interface import ST3215Interface
 
 app = Flask(__name__)
 
 # Global State
 state = {
     'is_running': False,
-    'engine': 'DXL',  # SIM, DXL, ESP
+    'engine': 'SIM',  # SIM, ST3215
     'status': 'Disconnected',
     'target_path': [],
     'actual_path': [],
@@ -125,7 +124,7 @@ def get_3d_status():
 def connect_engine():
     global state, active_iface, start_time
     data = request.json
-    engine_type = data.get('engine', 'DXL')
+    engine_type = data.get('engine', 'ST3215')
     
     if state['is_running']:
         # Disconnect
@@ -139,10 +138,8 @@ def connect_engine():
     state['engine'] = engine_type
     if engine_type == 'SIM':
         active_iface = SimulationInterface()
-    elif engine_type == 'DXL':
-        active_iface = DynamixelInterface(port='COM3') 
-    elif engine_type == 'ESP':
-        active_iface = ESP32Interface(port='COM3')
+    elif engine_type == 'ST3215':
+        active_iface = ST3215Interface(port='COM12')
         
     state['status'] = 'Connecting...'
     if engine_type == 'SIM':
