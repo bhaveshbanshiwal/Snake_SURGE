@@ -1,13 +1,14 @@
+#include "soc/rtc_cntl_reg.h"
+#include "soc/soc.h"
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <SCServo.h>
 #include <WiFi.h>
 #include <Wire.h>
+#include <esp_mac.h>
 #include <esp_now.h>
 #include <esp_wifi.h>
-#include <esp_mac.h>
-#include "soc/soc.h"
-#include "soc/rtc_cntl_reg.h"
+
 volatile char wirelessBuffer[250];
 volatile bool hasWirelessCmd = false;
 enum ConnectionState {
@@ -37,7 +38,7 @@ void updateDisplay(ConnectionState newState) {
   if (currentState == newState)
     return;
   if (millis() < holdMessageUntil && newState == STATE_DISCONNECTED)
-    return; 
+    return;
   currentState = newState;
   display.clearDisplay();
   display.setTextSize(1);
@@ -49,8 +50,8 @@ void updateDisplay(ConnectionState newState) {
     uint8_t mac[6];
     esp_read_mac(mac, ESP_MAC_WIFI_STA);
     char macStr[18];
-    snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
-             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X", mac[0],
+             mac[1], mac[2], mac[3], mac[4], mac[5]);
     display.println(macStr);
   } else if (newState == STATE_USB) {
     display.println("Status: USB Active");
@@ -65,14 +66,20 @@ SMS_STS st;
 #define S_RXD 18
 #define S_TXD 19
 void setup() {
-  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); 
-  Serial.begin(115200);                             
-  Serial1.begin(1000000, SERIAL_8N1, S_RXD, S_TXD); 
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+  Serial.begin(115200);
+  Serial1.begin(1000000, SERIAL_8N1, S_RXD, S_TXD);
   st.pSerial = &Serial1;
   Wire.begin(21, 22);
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+
+  // SAFETY CAPPING: Limit max torque to 20% (200/1000) for all servos (ID 254)
+  // This physically limits the max current draw so 10 motors won't overload
+  // your supply
+  st.writeWord(254, 48, 200);
+
   WiFi.mode(WIFI_STA);
-  WiFi.disconnect(); 
+  WiFi.disconnect();
   esp_wifi_set_channel(1, WIFI_SECOND_CHAN_NONE);
   updateDisplay(STATE_DISCONNECTED);
   if (esp_now_init() == ESP_OK) {
@@ -116,7 +123,7 @@ void processCommand(String req) {
     display.println("Servo ID is now: " + String(newId));
     display.display();
     holdMessageUntil = millis() + 3000;
-    currentState = STATE_INIT; 
+    currentState = STATE_INIT;
     Serial.println("ID_SET_OK");
   } else if (req == "T") {
     String response = "T,";
@@ -136,6 +143,15 @@ void processCommand(String req) {
 }
 void loop() {
   unsigned long now = millis();
+  
+  // Auto-reminder: Broadcast 20% torque limit every 5 seconds
+  // This guarantees that if a servo reboots and forgets its RAM limit, it is quickly reminded.
+  static unsigned long lastTorqueReminder = 0;
+  if (now - lastTorqueReminder >= 5000) {
+    lastTorqueReminder = now;
+    st.writeWord(254, 48, 200); 
+  }
+  
   if (Serial.available()) {
     String req = Serial.readStringUntil('\n');
     lastUsbTime = now;
