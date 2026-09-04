@@ -2,6 +2,8 @@
 #include "soc/soc.h"
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <Adafruit_NeoPixel.h>
+#include <math.h>
 #include <SCServo.h>
 #include <WiFi.h>
 #include <Wire.h>
@@ -34,6 +36,14 @@ void OnDataRecv(const esp_now_recv_info *info, const uint8_t *incomingData,
 #define SCREEN_HEIGHT 32
 #define OLED_RESET -1
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+#define LED_PIN 23
+#define LED_COUNT 2
+Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
+
+int globalMaxLoad = 0;
+unsigned long lastTelemetryTime = 0;
+bool telemetryActive = false;
 void updateDisplay(ConnectionState newState) {
   if (currentState == newState)
     return;
@@ -62,6 +72,49 @@ void updateDisplay(ConnectionState newState) {
   }
   display.display();
 }
+
+void updateLEDs() {
+  unsigned long now = millis();
+  
+  // LED 0: Connection Status
+  if (currentState == STATE_DISCONNECTED) {
+    // Smooth breathing animation (White)
+    uint8_t breath = (sin(now / 400.0) + 1.0) * 40.0; 
+    strip.setPixelColor(0, strip.Color(breath, breath, breath));
+  } else if (currentState == STATE_USB) {
+    strip.setPixelColor(0, strip.Color(0, 0, 255)); // Blue
+  } else if (currentState == STATE_ESPNOW) {
+    strip.setPixelColor(0, strip.Color(0, 255, 0)); // Green
+  } else if (currentState == STATE_BOTH) {
+    strip.setPixelColor(0, strip.Color(0, 255, 255)); // Cyan
+  }
+
+  // LED 1: Telemetry & Error Status
+  if (now - lastTelemetryTime > 2000) {
+    telemetryActive = false;
+  }
+  
+  if (!telemetryActive) {
+    strip.setPixelColor(1, 0); // Off if no telemetry running
+  } else if (globalMaxLoad == -1) {
+    strip.setPixelColor(1, strip.Color(255, 0, 0)); // Hardware Error (No response)
+  } else if (globalMaxLoad > 600) {
+    // Flashing Red Warning for Overload (>60%)
+    if ((now / 150) % 2 == 0) {
+      strip.setPixelColor(1, strip.Color(255, 0, 0));
+    } else {
+      strip.setPixelColor(1, 0);
+    }
+  } else if (globalMaxLoad > 300) {
+    // Solid Yellow (Moderate Load)
+    strip.setPixelColor(1, strip.Color(255, 120, 0));
+  } else {
+    // Solid Green (Normal Safe Load)
+    strip.setPixelColor(1, strip.Color(0, 255, 0));
+  }
+  
+  strip.show();
+}
 SMS_STS st;
 #define S_RXD 18
 #define S_TXD 19
@@ -73,10 +126,9 @@ void setup() {
   Wire.begin(21, 22);
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
 
-  // SAFETY CAPPING: Limit max torque to 20% (200/1000) for all servos (ID 254)
-  // This physically limits the max current draw so 10 motors won't overload
-  // your supply
-  st.writeWord(254, 48, 200);
+  strip.begin();
+  strip.show(); // Initialize all pixels to 'off'
+  strip.setBrightness(50); // Set brightness to 20% (max is 255)
 
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
@@ -127,15 +179,29 @@ void processCommand(String req) {
     Serial.println("ID_SET_OK");
   } else if (req == "T") {
     String response = "T,";
+    int currentMaxLoad = -1;
+    int respondedCount = 0;
+    
     for (int i = 1; i <= 10; i++) {
       if (st.FeedBack(i) != -1) {
+        respondedCount++;
         int pos = st.ReadPos(-1);
         int vel = st.ReadSpeed(-1);
         int load = st.ReadLoad(-1);
+        if (load > currentMaxLoad) currentMaxLoad = load;
+        
         response += String(i) + ":" + String(load) + ":" + String(vel) + ":" +
                     String(pos) + ",";
       }
     }
+    
+    if (respondedCount == 0) {
+      globalMaxLoad = -1; // Comms completely dead
+    } else {
+      globalMaxLoad = currentMaxLoad;
+    }
+    lastTelemetryTime = millis();
+    telemetryActive = true;
     Serial.println(response);
     uint8_t bcast[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     esp_now_send(bcast, (uint8_t *)response.c_str(), response.length());
@@ -143,14 +209,6 @@ void processCommand(String req) {
 }
 void loop() {
   unsigned long now = millis();
-  
-  // Auto-reminder: Broadcast 20% torque limit every 5 seconds
-  // This guarantees that if a servo reboots and forgets its RAM limit, it is quickly reminded.
-  static unsigned long lastTorqueReminder = 0;
-  if (now - lastTorqueReminder >= 5000) {
-    lastTorqueReminder = now;
-    st.writeWord(254, 48, 200); 
-  }
   
   if (Serial.available()) {
     String req = Serial.readStringUntil('\n');
@@ -174,4 +232,5 @@ void loop() {
     newState = STATE_ESPNOW;
   }
   updateDisplay(newState);
+  updateLEDs();
 }

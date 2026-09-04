@@ -61,7 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const id of dxlIds) {
                 const m = data.telemetry[id];
                 const deg = ((m.position - 2048) * (360.0 / 4096.0)).toFixed(1);
-                const torque = (m.load * (0.22 / 1500.0)).toFixed(3);
+                // raw load 0-1000 maps to 0-30 kg.cm for ST3215
+                const torque = (m.load * 0.03).toFixed(2);
                 
                 const box = document.createElement('div');
                 box.className = 'telem-box';
@@ -69,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="motor-id">MOTOR ${id}</div>
                     <div class="data-row"><span>Angle:</span> <span>${deg}°</span></div>
                     <div class="data-row"><span>Speed:</span> <span>${m.velocity}</span></div>
-                    <div class="data-row"><span>Torque:</span> <span>${torque} Nm</span></div>
+                    <div class="data-row"><span>Torque:</span> <span>${torque} kg.cm</span></div>
                 `;
                 grid.appendChild(box);
             }
