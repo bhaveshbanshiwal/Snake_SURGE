@@ -18,9 +18,9 @@ This guide will walk you through flashing the OS, deploying this code to your Ra
    - Run the following two commands exactly as written:
      ```cmd
      set DISPLAY=localhost:0.0
-     ssh -Y pi@surgesnake.local
+     ssh -Y smartsnake@snakerobo.local
      ```
-     *(Change `pi@surgesnake.local` if your username or hostname is different, e.g., `smartsnake@snakerobo.local`).*
+     *(Change `smartsnake@snakerobo.local` if your username or hostname is different, e.g., `smartsnake@snakerobo.local`).*
 5. **Run Your Code:**
    - Navigate to your project folder: `cd SURGE-SNAKE`
    - Run your Python script: `python3 main.py`
@@ -38,7 +38,7 @@ Since the Pi will sit inside the snake, it will run "headless" (without a monito
    - **Storage:** Select your 32GB SD Card.
 4. **OS Customization (Crucial for Headless Setup):**
    - Click the gear icon (or "Edit Settings") before writing.
-   - Check **Set hostname** (e.g., `surgesnake.local`).
+   - Check **Set hostname** (e.g., `snakerobo.local`).
    - Check **Enable SSH** (Use password authentication).
    - Set **Username and Password** (e.g., user: `pi`, pass: `password`).
    - Check **Configure wireless LAN** and enter your home Wi-Fi SSID and Password.
@@ -60,7 +60,7 @@ Wait about 2 minutes for the Pi to boot and connect to your Wi-Fi.
 
 1. Open PowerShell on your Windows PC and SSH into the Pi:
    ```bash
-   ssh pi@surgesnake.local
+   ssh smartsnake@snakerobo.local
    ```
    *(Accept the fingerprint prompt and enter your password).*
 2. Once inside the Pi, update the system:
@@ -74,25 +74,25 @@ Wait about 2 minutes for the Pi to boot and connect to your Wi-Fi.
 
    **Method A: System Packages (Best for large libraries like Matplotlib)**
    ```bash
-   sudo apt install python3-matplotlib python3-numpy python3-pip
+   sudo apt install python3-flask python3-psutil python3-serial python3-pip
    ```
 
    **Method B: The Quick Override (If a library isn't in apt)**
    ```bash
-   pip install dynamixel-sdk pyserial pybullet --break-system-packages
+   pip install pybullet --break-system-packages
    ```
 
    **Method C: Python Virtual Environment (Best Practice)**
    ```bash
    python3 -m venv ~/snake_env
    source ~/snake_env/bin/activate
-   pip install matplotlib dynamixel-sdk pyserial pybullet
+   pip install flask psutil pyserial pybullet
    ```
    *(If you use a venv, remember you must run `source ~/snake_env/bin/activate` before running your code every time).*
 
 4. Add your user to the `dialout` group so Python can access the USB port without root permissions:
    ```bash
-   sudo usermod -aG dialout pi
+   sudo usermod -aG dialout smartsnake
    ```
    *You must log out and log back in (or reboot the Pi) for this to take effect.*
 
@@ -104,14 +104,14 @@ You have this `SURGE-SNAKE` folder on your Windows Desktop. We need to send it t
 ### Method A: Using SCP (Command Line)
 Open a **new** PowerShell window on your Windows PC (not the SSH session) and run:
 ```bash
-scp -r "C:\Users\bansi\OneDrive\Desktop\SURGE-SNAKE" pi@surgesnake.local:/home/pi/
+scp -r "C:\Users\bansi\OneDrive\Desktop\SURGE-SNAKE" smartsnake@snakerobo.local:/home/smartsnake/
 ```
 This will copy the entire folder over the network.
 
 ### Method B: Using WinSCP (GUI)
 1. Download and install [WinSCP](https://winscp.net/).
-2. Connect to `surgesnake.local` using your Pi's username and password.
-3. Drag and drop the `SURGE-SNAKE` folder from your desktop into the `/home/pi/` directory.
+2. Connect to `snakerobo.local` using your Pi's username and password.
+3. Drag and drop the `SURGE-SNAKE` folder from your desktop into the `/home/smartsnake/` directory.
 
 > **Note on USB Ports:** 
 > I have already updated the Python scripts to automatically detect that they are running on a Raspberry Pi (Linux) and they will look for the U2D2 at `/dev/ttyUSB0` instead of `COM3`. You do not need to manually change the code!
@@ -119,7 +119,7 @@ This will copy the entire folder over the network.
 ---
 
 ## Phase 5: Testing & Running
-SSH back into your Pi (`ssh pi@surgesnake.local`) and navigate to the folder:
+SSH back into your Pi (`ssh smartsnake@snakerobo.local`) and navigate to the folder:
 ```bash
 cd SURGE-SNAKE
 ```
@@ -191,7 +191,7 @@ If you need to view a GUI application running on the headless Raspberry Pi direc
 Open your Windows `cmd.exe` prompt and set the display variable before connecting. The `-Y` flag enables trusted X11 forwarding.
 ```cmd
 set DISPLAY=localhost:0.0
-ssh -Y pi@surgesnake.local
+ssh -Y smartsnake@snakerobo.local
 ```
 *(If you were using PowerShell, the command would be `$env:DISPLAY="localhost:0.0"`)*
 

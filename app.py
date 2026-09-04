@@ -20,7 +20,9 @@ class SnakeDashboard(tk.Tk):
         self.kinematics = SnakeKinematics()
         self.path_engine = PathEngine()
         self.sim_iface = SimulationInterface()
-        self.st3215_iface = ST3215Interface(port='COM12')
+        import platform
+        default_port = 'COM12' if platform.system() == 'Windows' else '/dev/ttyUSB0'
+        self.st3215_iface = ST3215Interface(port=default_port)
         
         self.active_iface = None
         self.target_path = []
@@ -47,7 +49,9 @@ class SnakeDashboard(tk.Tk):
         
         self.mode_var = tk.StringVar(value="SIM")
         ttk.Radiobutton(control_frame, text="Simulation (PyBullet)", variable=self.mode_var, value="SIM").pack(side=tk.LEFT, padx=10, pady=5)
-        ttk.Radiobutton(control_frame, text="Hardware (ST3215 via ESP32 COM12)", variable=self.mode_var, value="ST3215").pack(side=tk.LEFT, padx=10, pady=5)
+        import platform
+        port_label = 'COM12' if platform.system() == 'Windows' else '/dev/ttyUSB0'
+        ttk.Radiobutton(control_frame, text=f"Hardware (ST3215 via ESP32 {port_label})", variable=self.mode_var, value="ST3215").pack(side=tk.LEFT, padx=10, pady=5)
         
         self.btn_connect = ttk.Button(control_frame, text="Connect Engine", command=self.toggle_connection)
         self.btn_connect.pack(side=tk.LEFT, padx=20)
@@ -351,8 +355,10 @@ def run_headless(use_sim=False):
         iface = SimulationInterface()
         print("Starting Simulation Engine...")
     else:
-        iface = ST3215Interface(port='COM12')
-        print("Starting ST3215 Hardware Engine on COM12...")
+        import platform
+        default_port = 'COM12' if platform.system() == 'Windows' else '/dev/ttyUSB0'
+        iface = ST3215Interface(port=default_port)
+        print(f"Starting ST3215 Hardware Engine on {default_port}...")
         
     connected, msg = iface.connect()
     if not connected:

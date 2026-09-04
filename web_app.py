@@ -139,7 +139,9 @@ def connect_engine():
     if engine_type == 'SIM':
         active_iface = SimulationInterface()
     elif engine_type == 'ST3215':
-        active_iface = ST3215Interface(port='COM12')
+        import platform
+        default_port = 'COM12' if platform.system() == 'Windows' else '/dev/ttyUSB0'
+        active_iface = ST3215Interface(port=default_port)
         
     state['status'] = 'Connecting...'
     if engine_type == 'SIM':
