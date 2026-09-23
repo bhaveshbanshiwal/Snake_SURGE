@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let actualPath = [];
     let robotPose = {x: 0, y: 0, yaw: 0};
     let segments = [];
+    let currentController = null;
+    let isReversed = false;
     
     let isDrawing = false;
     let isPanning = false;
@@ -51,6 +53,29 @@ document.addEventListener('DOMContentLoaded', () => {
             robotPose = data.robot_pose;
             actualPath = data.actual_path;
             segments = data.segments || [];
+            currentController = data.controller;
+            isReversed = data.is_reversed;
+            
+            // Update Controller HUD
+            if (currentController) {
+                const stickDot = document.getElementById('stick-dot');
+                if (stickDot) stickDot.style.transform = `translate(calc(-50% + ${currentController.x * 30}px), calc(-50% + ${-currentController.y * 30}px))`;
+                
+                const rtFill = document.getElementById('rt-fill');
+                if (rtFill) rtFill.style.height = `${currentController.trigger_rt * 100}%`;
+                
+                const btnStart = document.getElementById('btn-vis-start');
+                if (btnStart) btnStart.className = (currentController.raw_buttons && currentController.raw_buttons['btn_0']) ? 'gamepad-btn active' : 'gamepad-btn';
+                
+                const btnStop = document.getElementById('btn-vis-stop');
+                if (btnStop) btnStop.className = (currentController.raw_buttons && currentController.raw_buttons['btn_1']) ? 'gamepad-btn active' : 'gamepad-btn';
+                
+                const btnRev = document.getElementById('btn-vis-reverse');
+                if (btnRev) btnRev.className = isReversed ? 'gamepad-btn active' : 'gamepad-btn';
+                
+                const btnPreset = document.getElementById('btn-vis-preset');
+                if (btnPreset) btnPreset.className = (currentController.raw_buttons && currentController.raw_buttons['btn_3']) ? 'gamepad-btn active' : 'gamepad-btn';
+            }
             
             // Update Telemetry UI
             const grid = document.getElementById('telemetry-grid');
@@ -124,7 +149,8 @@ document.addEventListener('DOMContentLoaded', () => {
             freq: parseFloat(document.getElementById('param-freq').value),
             phase: parseFloat(document.getElementById('param-phase').value),
             force: parseFloat(document.getElementById('param-force').value),
-            speed: parseFloat(document.getElementById('param-speed').value)
+            speed: parseFloat(document.getElementById('param-speed').value),
+            low_power: document.getElementById('param-lowpower') ? document.getElementById('param-lowpower').checked : false
         };
         try {
             await fetch('/api/params', {
@@ -364,6 +390,31 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.beginPath();
         ctx.arc(rx, ry, 6, 0, Math.PI * 2);
         ctx.fill();
+        
+        // Draw Controller Arrow (Yellow)
+        if (currentController && currentController.active) {
+            const cx = currentController.x;
+            const cy = currentController.y;
+            if (Math.abs(cx) > 0.15 || Math.abs(cy) > 0.15) {
+                const stickAngle = Math.atan2(cy, cx) - (Math.PI / 2.0);
+                const worldAngle = robotPose.yaw - stickAngle;
+                const arrowLen = 40;
+                const ax = rx + Math.cos(worldAngle) * arrowLen;
+                const ay = ry - Math.sin(worldAngle) * arrowLen;
+                
+                ctx.strokeStyle = '#ffff00';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(rx, ry);
+                ctx.lineTo(ax, ay);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.arc(ax, ay, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffff00';
+                ctx.fill();
+            }
+        }
     }
     
     // Initial Render

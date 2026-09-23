@@ -39,7 +39,7 @@
                     <div class="engine-selector">
                         <label>
                             <input type="radio" name="engine" value="ST3215" checked>
-                            Hardware (ST3215 on COM10)
+                            Hardware (ST3215 Auto-Detect)
                         </label>
                         <label>
                             <input type="radio" name="engine" value="SIM">
@@ -55,6 +55,32 @@
                     <div class="status-indicator">
                         <span class="dot" id="status-dot"></span>
                         <span id="conn-status">Disconnected</span>
+                    </div>
+                </section>
+
+                <section class="card" id="gamepad-card">
+                    <h2>Gamepad State</h2>
+                    <div class="gamepad-layout">
+                        <div class="stick-container">
+                            <label>Left Stick (Steer)</label>
+                            <div class="stick-box">
+                                <div class="stick-dot" id="stick-dot"></div>
+                            </div>
+                        </div>
+                        <div class="gamepad-controls">
+                            <div class="trigger-bar-container">
+                                <label>RT (Speed Pedal)</label>
+                                <div class="trigger-bar-bg">
+                                    <div class="trigger-bar-fill" id="rt-fill"></div>
+                                </div>
+                            </div>
+                            <div class="face-buttons">
+                                <div class="gamepad-btn" id="btn-vis-preset">PRESET <span>(Y)</span></div>
+                                <div class="gamepad-btn" id="btn-vis-reverse">REVERSE <span>(X)</span></div>
+                                <div class="gamepad-btn" id="btn-vis-stop">STOP <span>(B)</span></div>
+                                <div class="gamepad-btn" id="btn-vis-start">START <span>(A)</span></div>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -113,6 +139,12 @@
                     <div class="input-group">
                         <label>Simulation Speed: <span id="val-speed">1.0</span>x</label>
                         <input type="range" id="param-speed" class="sim-param" min="0.1" max="10.0" step="0.1" value="1.0">
+                    </div>
+                    <div class="input-group" style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #333;">
+                        <label style="color: #ffaa00; display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="param-lowpower" class="sim-param" style="width: 18px; height: 18px;">
+                            Low Power Mode (&lt; 2A)
+                        </label>
                     </div>
                     <button id="btn-open-3d" class="btn-secondary" style="margin-top: 15px; width: 100%;">Open 3D Viewer 🌐</button>
                 </section>

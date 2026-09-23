@@ -13,7 +13,7 @@ python app.py
 ```
 **What this does:**
 - Bypasses all Tkinter GUI libraries entirely (so it won't crash on a headless Pi).
-- Automatically targets `COM3` (Windows) or `/dev/ttyUSB0` (Linux/Raspberry Pi) to connect to physical Dynamixels.
+- Automatically targets `COM3` (Windows) or `/dev/ttyUSB0` (Linux/Raspberry Pi) to connect to physical ST3215 servos.
 - Loads a straight-line Path Engine and slithers infinitely until you press `Ctrl+C`.
 
 *(If you want to test the headless logic using PyBullet instead of physical motors, run: `python app.py --sim`)*
@@ -29,7 +29,7 @@ python app.py --gui
 ```
 **What this does:**
 - Opens the Tkinter **Master Control Dashboard**.
-- Allows you to choose between **Simulation Mode** (PyBullet 3D Engine) or **Hardware Mode** (Dynamixel COM3).
+- Allows you to choose between **Simulation Mode** (PyBullet 3D Engine) or **Hardware Mode** (ST3215 Waveshare COM3).
 - **Draw a Path**: Click and drag your mouse on the 2D canvas, or type a mathematical function like `sin(x)`.
 - **Live Tuning**: In Simulation mode, you can drag the sliders inside the 3D PyBullet window to actively alter the snake's physics!
 - **Auto-Stop & Accuracy Report**: When the snake finishes tracking your path, it auto-stops and pops up a native Matplotlib window detailing its exact **Path Tracking Accuracy %**.

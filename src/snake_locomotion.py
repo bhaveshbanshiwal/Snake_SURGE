@@ -12,7 +12,7 @@ class SnakeKinematics:
         self.ticks_per_radian = 4096.0 / (2.0 * math.pi)
 
     def calculate_positions(self, current_time, turn_offset=None):
-        """Returns Dynamixel ticks and radians for each motor at the current time."""
+        """Returns ST3215 Waveshare ticks and radians for each motor at the current time."""
         positions = {}
         angles = {}
         if turn_offset is not None:

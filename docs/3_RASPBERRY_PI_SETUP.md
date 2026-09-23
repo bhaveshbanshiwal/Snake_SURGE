@@ -49,9 +49,9 @@ Since the Pi will sit inside the snake, it will run "headless" (without a monito
 ## Phase 2: Hardware Wiring & Booting
 1. Insert the flashed SD card into the Raspberry Pi.
 2. Plug the USB-C 5V 3A adapter into the Pi to boot it up.
-3. Plug the **U2D2 Interface** into one of the Pi's USB ports.
-4. Connect the **5V 10A Power Supply** to the **U2D2 PHB Power Board** (Double check positive/negative polarity!).
-5. Daisy-chain your 2 Dynamixel motors to the U2D2 PHB.
+3. Plug the **Serial Bus Servo Driver Interface** into one of the Pi's USB ports.
+4. Connect the **5V 10A Power Supply** to the **Serial Bus Servo Driver PHB Power Board** (Double check positive/negative polarity!).
+5. Daisy-chain your 2 ST3215 Waveshare motors to the Serial Bus Servo Driver PHB.
 
 ---
 
@@ -114,7 +114,7 @@ This will copy the entire folder over the network.
 3. Drag and drop the `SURGE-SNAKE` folder from your desktop into the `/home/smartsnake/` directory.
 
 > **Note on USB Ports:** 
-> I have already updated the Python scripts to automatically detect that they are running on a Raspberry Pi (Linux) and they will look for the U2D2 at `/dev/ttyUSB0` instead of `COM3`. You do not need to manually change the code!
+> I have already updated the Python scripts to automatically detect that they are running on a Raspberry Pi (Linux) and they will look for the Serial Bus Servo Driver at `/dev/ttyUSB0` instead of `COM3`. You do not need to manually change the code!
 
 ---
 

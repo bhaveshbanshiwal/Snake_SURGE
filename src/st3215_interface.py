@@ -11,6 +11,8 @@ class ST3215Interface:
         self.baudrate = baudrate
         self.serial_port = None
         self.is_connected = False
+        self.last_positions = {}
+        self.max_speed_delta = 10  # Maximum position change per update (approx 200 units/sec at 20Hz). Lower = slower.
         
     def connect(self):
         """Opens serial port to the ESP32."""
@@ -18,6 +20,7 @@ class ST3215Interface:
             self.serial_port = serial.Serial(self.port_name, self.baudrate, timeout=1)
             time.sleep(2)  # Wait for ESP32 to reset upon serial connection
             self.is_connected = True
+            self.last_positions = {} # Reset positions on connect
             return True, "Connected successfully"
         except Exception as e:
             return False, f"Failed to open port {self.port_name}: {e}"
@@ -33,15 +36,29 @@ class ST3215Interface:
         Sends target positions to the ESP32 bridge.
         Format: P,1:2048,2:2048,...,10:2048\n
         ST3215 uses 0-4095 for position (2047 is center), just like Dynamixel X-series.
+        Includes a software speed limiter to prevent sudden power spikes.
         """
         if not self.is_connected: return
         
         # Build command string
         parts = ["P"]
-        for motor_id, pos in positions_dict.items():
-            # Clamp to ST3215 safe range 0-4095
-            pos_clamped = max(0, min(4095, int(pos)))
-            parts.append(f"{motor_id}:{pos_clamped}")
+        for motor_id, target_pos in positions_dict.items():
+            # Clamp target to ST3215 safe range 0-4095
+            target_pos = max(0, min(4095, int(target_pos)))
+            
+            # --- SPEED LIMITER LOGIC ---
+            if motor_id in self.last_positions:
+                current_pos = self.last_positions[motor_id]
+                diff = target_pos - current_pos
+                
+                # Limit the maximum step size
+                if abs(diff) > self.max_speed_delta:
+                    # Move towards target by max_speed_delta
+                    target_pos = current_pos + (self.max_speed_delta if diff > 0 else -self.max_speed_delta)
+                    
+            # Save limited position for next iteration
+            self.last_positions[motor_id] = target_pos
+            parts.append(f"{motor_id}:{target_pos}")
             
         command = ",".join(parts) + "\n"
         self.serial_port.write(command.encode('utf-8'))

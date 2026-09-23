@@ -9,7 +9,7 @@ The Receiver ESP32 (Waveshare Servo Driver) features two WS2812 RGB NeoPixel LED
 Indicates the current communication link between the master controller and the ESP32.
 * **🤍 Slow Breathing White:** Disconnected / Waiting for a signal.
 * **🟦 Solid Blue:** USB Serial connection active.
-* **🟩 Solid Green:** Wireless (ESP-NOW) connection active.
+* **🩷 Light Pink:** Wireless (ESP-NOW) connection active.
 * **🟦🟩 Solid Cyan:** Both USB and Wireless are active simultaneously.
 
 ### LED 1: Motor Telemetry & Error Status (Right LED)
