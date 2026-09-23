@@ -22,6 +22,7 @@ def main():
     print(f"Connecting to ESP32 Bridge on port {default_port}...")
     
     # 2. Initialize Hardware Interface
+    # Since data is shared across all 10 daisy-chained servos, we only need 1 port.
     iface = ST3215Interface(num_motors=10, port=default_port)
     success, msg = iface.connect()
     
@@ -56,7 +57,7 @@ def main():
                 pos = 2048 + int(amplitude * sine_val)
                 positions[i] = pos
                 
-            # Send positions to servos
+            # Send positions to all 10 servos on the single shared data line
             iface.write_positions(positions)
             
             # Print loads for the first 4 motors so you can monitor if they are getting overloaded
@@ -72,7 +73,7 @@ def main():
         print("\nStopping test...")
     finally:
         # Gracefully center all motors on exit so it doesn't stay twisted
-        print("Centering motors before exit...")
+        print("\nCentering motors before exit...")
         center_pos = {i: 2048 for i in range(1, 11)}
         iface.write_positions(center_pos)
         time.sleep(0.5)
