@@ -31,12 +31,12 @@ class ST3215Interface:
             self.serial_port.close()
             self.is_connected = False
             
-    def write_positions(self, positions_dict):
+    def write_positions(self, positions_dict, speed=2400):
         """
-        Sends target positions to the ESP32 bridge.
-        Format: P,1:2048,2:2048,...,10:2048\n
-        ST3215 uses 0-4095 for position (2047 is center), just like Dynamixel X-series.
-        Includes a software speed limiter to prevent sudden power spikes.
+        Sends target positions and speed to the ESP32 bridge.
+        Format: P,1:2048:2400,2:2048:2400,...,10:2048:2400\n
+        ST3215 uses 0-4095 for position (2047 is center).
+        Speed is in ST3215 units (0-3999 typically, where higher is faster).
         """
         if not self.is_connected: return
         
@@ -46,19 +46,11 @@ class ST3215Interface:
             # Clamp target to ST3215 safe range 0-4095
             target_pos = max(0, min(4095, int(target_pos)))
             
-            # --- SPEED LIMITER LOGIC ---
-            if motor_id in self.last_positions:
-                current_pos = self.last_positions[motor_id]
-                diff = target_pos - current_pos
-                
-                # Limit the maximum step size
-                if abs(diff) > self.max_speed_delta:
-                    # Move towards target by max_speed_delta
-                    target_pos = current_pos + (self.max_speed_delta if diff > 0 else -self.max_speed_delta)
-                    
-            # Save limited position for next iteration
+            # Save position for reference
             self.last_positions[motor_id] = target_pos
-            parts.append(f"{motor_id}:{target_pos}")
+            
+            # Format: motor_id:target_pos:speed
+            parts.append(f"{motor_id}:{target_pos}:{speed}")
             
         command = ",".join(parts) + "\n"
         self.serial_port.write(command.encode('utf-8'))

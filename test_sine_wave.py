@@ -34,31 +34,43 @@ def main():
     print("Press Ctrl+C to stop.")
     
     try:
+        # --- ALIGNMENT SEQUENCE ---
+        print("Aligning all servos to center (straightening up slowly)...")
+        center_pos = {i: 2048 for i in range(1, 11)}
+        
+        # Send the center command with a very slow hardware speed (e.g., 600) so it doesn't violently curl
+        for step in range(200): # 200 ticks * 0.05s = 10 seconds max
+            iface.write_positions(center_pos, speed=600)
+            
+            # Check if all motors have reached 2048
+            all_centered = all(iface.last_positions.get(i, 2048) == 2048 for i in range(1, 11))
+            if all_centered and step > 10: 
+                break
+                
+            time.sleep(0.05)
+            
+        print("Alignment complete! Starting sine wave...")
+        time.sleep(1) # Brief pause before the wave starts
+        
         start_time = time.time()
         
         # --- TEST PARAMETERS ---
-        # 4096 total range, 2048 is center. 
-        # Amplitude of 300 is approx +/- 26 degrees. This is small enough to prevent it from biting its own tail.
         amplitude = 300       
-        # Very slow frequency (0.2 Hz = 1 full wave every 5 seconds)
         frequency = 0.2       
-        # Phase shift between consecutive motors to create a smooth traveling wave instead of all moving together
         phase_offset = 0.6    
+        sine_wave_speed = 1500 # Medium speed for the sine wave motion
         
         while True:
             t = time.time() - start_time
             
             positions = {}
             for i in range(1, 11):
-                # Calculate sine wave for each motor with a phase shift
                 sine_val = math.sin(2 * math.pi * frequency * t - (i * phase_offset))
-                
-                # Convert to ST3215 position
                 pos = 2048 + int(amplitude * sine_val)
                 positions[i] = pos
                 
-            # Send positions to all 10 servos on the single shared data line
-            iface.write_positions(positions)
+            # Send positions with medium hardware speed
+            iface.write_positions(positions, speed=sine_wave_speed)
             
             # Print loads for the first 4 motors so you can monitor if they are getting overloaded
             telemetry = iface.read_telemetry()
