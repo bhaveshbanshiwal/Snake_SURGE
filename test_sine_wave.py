@@ -72,11 +72,8 @@ def main():
             # Send positions with medium hardware speed
             iface.write_positions(positions, speed=sine_wave_speed)
             
-            # Print loads for the first 4 motors so you can monitor if they are getting overloaded
-            telemetry = iface.read_telemetry()
-            if telemetry:
-                loads = [f"M{m}:{telemetry.get(m, {}).get('load', 0)}" for m in range(1, 5)]
-                print(f"Time: {t:.1f}s | Loads: {' '.join(loads)}    ", end='\r')
+            # We skip reading telemetry here to avoid serial timeouts that cause stuttering in the motion
+            print(f"Time: {t:.1f}s | Sending sine wave positions...    ", end='\r')
             
             # Update at 20Hz
             time.sleep(0.05)
