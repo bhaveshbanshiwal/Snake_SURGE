@@ -55,7 +55,7 @@ def main():
         start_time = time.time()
         
         # --- TEST PARAMETERS ---
-        amplitude = 150       
+        amplitude = 300       
         frequency = 0.4       
         phase_offset = 0.6    
         sine_wave_speed = 1500 # Medium speed for the sine wave motion
