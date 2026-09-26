@@ -9,7 +9,7 @@ from src.st3215_interface import ST3215Interface
 
 def main():
     print("="*50)
-    print(" Snake SURGE - Slow Sine Wave Test")
+    print(" Snake SURGE - Spiral Curl Test")
     print("="*50)
     
     # 1. Auto-detect COM port just like the main app does
@@ -22,7 +22,6 @@ def main():
     print(f"Connecting to ESP32 Bridge on port {default_port}...")
     
     # 2. Initialize Hardware Interface
-    # Since data is shared across all 10 daisy-chained servos, we only need 1 port.
     iface = ST3215Interface(num_motors=10, port=default_port)
     success, msg = iface.connect()
     
@@ -30,7 +29,7 @@ def main():
         print(f"Failed to connect: {msg}")
         sys.exit(1)
         
-    print("Connected successfully. Starting slow sine wave test.")
+    print("Connected successfully. Starting spiral curl test.")
     print("Press Ctrl+C to stop.")
     
     try:
@@ -38,54 +37,61 @@ def main():
         print("Aligning all servos to center (straightening up slowly)...")
         center_pos = {i: 2048 for i in range(1, 11)}
         
-        # Send the center command with a very slow hardware speed (e.g., 600) so it doesn't violently curl
         for step in range(200): # 200 ticks * 0.05s = 10 seconds max
             iface.write_positions(center_pos, speed=600)
             
-            # Check if all motors have reached 2048
             all_centered = all(iface.last_positions.get(i, 2048) == 2048 for i in range(1, 11))
             if all_centered and step > 10: 
                 break
                 
             time.sleep(0.05)
             
-        print("Alignment complete! Starting sine wave...")
-        time.sleep(1) # Brief pause before the wave starts
+        print("Alignment complete! Starting spiral curl...")
+        time.sleep(1)
         
+        # --- SPIRAL PARAMETERS ---
+        max_degrees = 45
+        ticks_per_degree = 4096 / 360.0
+        max_offset = int(max_degrees * ticks_per_degree) # Max curl at the tail
+        
+        curl_duration = 15.0 # Seconds to reach full curl
         start_time = time.time()
-        
-        # --- TEST PARAMETERS ---
-        amplitude = 150       
-        frequency = 0.4       
-        phase_offset = 0.6    
-        sine_wave_speed = 1500 # Medium speed for the sine wave motion
         
         while True:
             t = time.time() - start_time
+            # Progress goes from 0.0 to 1.0
+            progress = min(1.0, t / curl_duration)
             
             positions = {}
             for i in range(1, 11):
-                sine_val = math.sin(2 * math.pi * frequency * t - (i * phase_offset))
-                pos = 2048 + int(amplitude * sine_val)
-                positions[i] = pos
+                # Head (i=1) curls up to max_degrees (87)
+                # Tail (i=10) curls proportionally less
+                target_offset = int(max_offset * ((11 - i) / 10.0))
+                current_offset = int(target_offset * progress)
                 
-            # Send positions with medium hardware speed
-            iface.write_positions(positions, speed=sine_wave_speed)
+                positions[i] = 2048 + current_offset
+                
+            iface.write_positions(positions, speed=300)
             
-            # We skip reading telemetry here to avoid serial timeouts that cause stuttering in the motion
-            print(f"Time: {t:.1f}s | Sending sine wave positions...    ", end='\r')
-            
-            # Update at 20Hz
+            if progress < 1.0:
+                print(f"Curling... {progress*100:.1f}%    ", end='\r')
+            else:
+                print("Spiral complete! Holding position...    ", end='\r')
+                
             time.sleep(0.05)
             
     except KeyboardInterrupt:
         print("\nStopping test...")
     finally:
-        # Gracefully center all motors on exit so it doesn't stay twisted
-        print("\nCentering motors before exit...")
+        print("\nUnfurling and centering motors before exit...")
+        # Unfurl slowly before exit
         center_pos = {i: 2048 for i in range(1, 11)}
-        iface.write_positions(center_pos)
-        time.sleep(0.5)
+        
+        # Send center command and wait a few seconds so it finishes
+        for _ in range(60): # 3 seconds
+            iface.write_positions(center_pos, speed=400)
+            time.sleep(0.05)
+            
         iface.disconnect()
         print("Hardware Shutdown Complete.")
 
