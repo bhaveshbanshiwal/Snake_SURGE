@@ -6,7 +6,7 @@ from src.st3215_interface import ST3215Interface
 
 def main():
     print("="*50)
-    print(" Snake SURGE - Center Alignment Tool")
+    print(" Snake SURGE - 3D Center Alignment Tool")
     print("="*50)
     
     # 1. Auto-detect COM port (Transmitter or Receiver)
@@ -28,7 +28,10 @@ def main():
     print("\nSending SLOW alignment command to center all motors...")
     print("The snake should gently uncurl into a straight line.")
     
-    # Center position is 2048
+    # Center position is 2048 for all ST3215 servos.
+    # Because 2048 is the absolute center of the servo horn, this works perfectly 
+    # to straighten out the snake regardless of if a motor is mounted as Pitch or Yaw, 
+    # or if its mounting is inverted.
     center_pos = {i: 2048 for i in range(1, 11)}
     
     # Send the command repeatedly for a few seconds to ensure it gets there slowly
