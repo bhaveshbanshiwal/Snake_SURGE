@@ -128,6 +128,11 @@ void setup() {
   strip.setBrightness(50); // Set brightness to 20% (max is 255)
 
   WiFi.mode(WIFI_STA);
+  
+  // Spoof the MAC address of the OLD receiver so transmitters don't need code updates
+  uint8_t oldMac[] = {0x28, 0x05, 0xA5, 0x4E, 0x01, 0x38};
+  esp_wifi_set_mac(WIFI_IF_STA, oldMac);
+  
   WiFi.disconnect();
   esp_wifi_set_channel(1, WIFI_SECOND_CHAN_NONE);
   
