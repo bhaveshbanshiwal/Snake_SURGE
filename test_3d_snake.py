@@ -47,10 +47,10 @@ def main():
         
         # --- 3D TEST PARAMETERS ---
         # The snake is now 3D (alternating Yaw and Pitch joints)
-        amplitude_yaw = 1100    # Set to ~96 degrees sweep (Safely within your 110-deg limit)
-        amplitude_pitch = 0     # Up-and-down motion. Set to 300-400 if you want a true 3D crawling motion.
-        frequency = 0.6         # Slightly faster wave speed (was 0.4)
-        phase_offset = 1.3      # Increased phase offset to fit a full 'S' curve across the 5 yaw segments (was 0.8)
+        amplitude_yaw = 900     # Horizontal sweep
+        amplitude_pitch = 700   # Vertical lifting motion (crucial for wheel-less movement)
+        frequency = 0.6         # Wave speed
+        phase_offset = 1.57     # Exactly pi/2 (creates one perfectly balanced full wave across 5 segments)
         sine_wave_speed = 1500
         
         while True:
