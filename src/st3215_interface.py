@@ -1,93 +1,160 @@
-import serial
+"""Gen 2.1 text protocol. Only the matching receiver accepts the handshake.
+
+No port is opened at import. Missing telemetry stays missing; it is never
+replaced by a fabricated centre position. STOP requests torque disable.
+"""
+import math
+import os
 import time
 
+
 class ST3215Interface:
-    """
-    Hardware interface for connecting to an ESP32 acting as a bridge to ST3215 servos.
-    """
-    def __init__(self, num_motors=10, port='COM3', baudrate=115200):
+    def __init__(self, num_motors=10, port=None, baudrate=115200):
         self.num_motors = num_motors
-        self.port_name = port
+        self.port_name = port or os.environ.get("SURGE_PORT")
         self.baudrate = baudrate
         self.serial_port = None
         self.is_connected = False
-        self.last_positions = {}
-        self.max_speed_delta = 10  # Maximum position change per update (approx 200 units/sec at 20Hz). Lower = slower.
-        
+        self.armed = False
+        self.last_positions = {}  # commanded positions, NOT measured positions
+        self.sensors = {}
+        self.sensor_time = None
+        self._rx_buffer = b''
+
+    def _send(self, command):
+        packet = (command + "\n").encode("ascii")
+        if self.serial_port.write(packet) != len(packet):
+            raise OSError('Incomplete serial command write')
+
+    def _sensor(self, line):
+        if not line.startswith("T:"):
+            return False
+        try:
+            values = dict(part.split(":", 1) for part in line.split())
+            self.sensors = {key: float(value) for key, value in values.items()}
+            self.sensor_time = time.monotonic()
+        except ValueError:
+            pass
+        return True
+
+    def _wait(self, prefix, timeout=0.35):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if b'\n' not in self._rx_buffer:
+                self._rx_buffer += self.serial_port.readline()
+            if len(self._rx_buffer) > 1024:
+                self._rx_buffer = b''
+                raise RuntimeError('Serial reply exceeds maximum length')
+            if b'\n' not in self._rx_buffer:
+                continue
+            packet, self._rx_buffer = self._rx_buffer.split(b'\n', 1)
+            line = packet.decode("ascii", errors="replace").strip()
+            if line.startswith("ERR,"):
+                self.armed = False
+                raise RuntimeError(f"Receiver fault: {line}")
+            if line == "STOP,WATCHDOG":
+                self.armed = False
+                if prefix != "OK,STOP":
+                    raise RuntimeError("Receiver watchdog stopped motion")
+            if self._sensor(line):
+                continue
+            if line.startswith(prefix):
+                return line
+        return None
+
     def connect(self):
-        """Opens serial port to the ESP32."""
+        if not self.port_name:
+            return False, "Select a serial port or set SURGE_PORT."
         try:
-            self.serial_port = serial.Serial(self.port_name, self.baudrate, timeout=1)
-            time.sleep(2)  # Wait for ESP32 to reset upon serial connection
-            self.is_connected = True
-            self.last_positions = {} # Reset positions on connect
-            return True, "Connected successfully"
-        except Exception as e:
-            return False, f"Failed to open port {self.port_name}: {e}"
-            
-    def disconnect(self):
-        """Closes serial port."""
-        if self.is_connected and self.serial_port:
-            self.serial_port.close()
+            import serial
+            self.serial_port = serial.Serial()
+            self.serial_port.port = self.port_name
+            self.serial_port.baudrate = self.baudrate
+            self.serial_port.timeout = 0.03
+            self.serial_port.write_timeout = 0.2
+            self.serial_port.dtr = False
+            self.serial_port.rts = False
+            self.serial_port.open()
+            self._rx_buffer = b''
+            # A board may still reset when USB opens. Retry the read-only handshake.
+            for _ in range(6):
+                self._send("HELLO")
+                if self._wait("SURGE,2.1", 0.5):
+                    self.is_connected = True
+                    self.stop()
+                    return True, "Gen 2.1 connected; torque off"
+            raise RuntimeError("No Gen 2.1 handshake. Flash the receiver and transmitter from this branch.")
+        except Exception as exc:
+            if self.serial_port:
+                self.serial_port.close()
             self.is_connected = False
-            
-    def write_positions(self, positions_dict, speed=2400):
-        """
-        Sends target positions and speed to the ESP32 bridge.
-        Format: P,1:2048:2400,2:2048:2400,...,10:2048:2400\n
-        ST3215 uses 0-4095 for position (2047 is center).
-        Speed is in ST3215 units (0-3999 typically, where higher is faster).
-        """
-        if not self.is_connected: return
-        
-        # Build command string
-        parts = ["P"]
-        for motor_id, target_pos in positions_dict.items():
-            # Clamp target to ST3215 safe range 0-4095
-            target_pos = max(0, min(4095, int(target_pos)))
-            
-            # Save position for reference
-            self.last_positions[motor_id] = target_pos
-            
-            # Format: motor_id:target_pos:speed
-            parts.append(f"{motor_id}:{target_pos}:{speed}")
-            
-        command = ",".join(parts) + "\n"
-        self.serial_port.write(command.encode('utf-8'))
-        
-    def read_telemetry(self):
-        """
-        Requests and parses telemetry from the ESP32 bridge.
-        Sends: T\n
-        Expects: T,1:load:vel:pos,2:load:vel:pos...\n
-        """
-        telemetry = {}
-        if not self.is_connected: return telemetry
-        
+            return False, str(exc)
+
+    def enable_torque(self):
+        self.start()
+
+    def disable_torque(self):
+        self.stop()
+
+    def start(self):
+        if not self.is_connected:
+            raise RuntimeError("Not connected")
+        self._send("RUN")
+        if self._wait("OK,RUN") is None:
+            raise RuntimeError("RUN was not acknowledged")
+        self.armed = True
+
+    def stop(self):
+        self.armed = False
+        if self.is_connected:
+            self._send("STOP")
+            if self._wait("OK,STOP") is None:
+                raise RuntimeError("STOP not acknowledged; receiver watchdog expires after 750 ms without targets")
+
+    def disconnect(self):
         try:
-            # Clear input buffer to get fresh telemetry
-            self.serial_port.reset_input_buffer()
-            self.serial_port.write(b"T\n")
-            
-            # Read line with timeout
-            response = self.serial_port.readline().decode('utf-8').strip()
-            
-            if response.startswith("T,"):
-                data_parts = response[2:].split(',')
-                for part in data_parts:
-                    vals = part.split(':')
-                    if len(vals) == 4:
-                        motor_id = int(vals[0])
-                        load = int(vals[1])
-                        vel = int(vals[2])
-                        pos = int(vals[3])
-                        telemetry[motor_id] = {'load': load, 'velocity': vel, 'position': pos}
-        except Exception as e:
-            pass # Ignore read timeouts to keep UI smooth
-            
-        # Ensure all motors have at least default telemetry so UI doesn't break if a packet drops
-        for motor_id in range(1, self.num_motors + 1):
-            if motor_id not in telemetry:
-                telemetry[motor_id] = {'load': 0, 'velocity': 0, 'position': 2048}
-                
-        return telemetry
+            if self.is_connected:
+                self.stop()
+        finally:
+            if self.serial_port:
+                self.serial_port.close()
+            self.serial_port = None
+            self.is_connected = False
+            self.armed = False
+
+    def write_positions(self, positions_dict, speed=600):
+        if not self.is_connected or not self.armed:
+            raise RuntimeError("Connect and RUN before sending targets")
+        if not math.isfinite(float(speed)) or not 1 <= speed <= 3400:
+            raise ValueError("speed must be 1..3400")
+        if not isinstance(positions_dict, dict) or not 1 <= len(positions_dict) <= self.num_motors:
+            raise ValueError("Provide a nonempty target dictionary")
+        parts = ["P"]
+        accepted = {}
+        for motor_id, target in positions_dict.items():
+            if type(motor_id) is not int or not 1 <= motor_id <= self.num_motors or isinstance(target, bool) or not math.isfinite(float(target)):
+                raise ValueError("Invalid motor target")
+            # +/-70 degrees, matching the receiver.
+            ticks = max(1252, min(2844, int(target)))
+            accepted[motor_id] = ticks
+            parts.append(f"{motor_id}:{ticks}:{int(speed)}")
+        if len(parts) > 1:
+            self._send(",".join(parts))
+            self.last_positions.update(accepted)
+
+    def read_telemetry(self):
+        if not self.is_connected:
+            return {}
+        self._send("T")
+        line = self._wait("T,", 0.2)
+        result = {i: {"valid": False, "load": None, "velocity": None, "position": None}
+                  for i in range(1, self.num_motors + 1)}
+        if line:
+            for field in line[2:].split(","):
+                try:
+                    sid, load, velocity, position = map(int, field.split(":"))
+                    if sid in result and 0 <= position <= 4095:
+                        result[sid] = {"valid": True, "load": load, "velocity": velocity, "position": position}
+                except ValueError:
+                    continue
+        return result

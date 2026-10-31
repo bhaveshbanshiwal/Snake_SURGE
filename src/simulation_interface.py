@@ -133,7 +133,7 @@ class SimulationInterface:
         except p.error:
             self.is_connected = False
             
-    def write_positions(self, angles_dict, max_force=5.0):
+    def write_positions(self, angles_dict, max_force=5.0, steps=1):
         """Applies target motor angles and steps the physics engine."""
         if not self.is_connected: return
         try:
@@ -142,7 +142,8 @@ class SimulationInterface:
                 joint_idx = dxl_id - 1
                 if joint_idx < num_j:
                     p.setJointMotorControl2(self.snake_id, joint_idx, p.POSITION_CONTROL, targetPosition=angle, force=max_force)
-            p.stepSimulation()
+            for _ in range(steps):
+                p.stepSimulation()
         except p.error:
             self.is_connected = False
         

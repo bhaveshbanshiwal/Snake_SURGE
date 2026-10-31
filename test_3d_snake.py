@@ -43,7 +43,6 @@ def main():
             time.sleep(0.05)
             
         print("Alignment complete. Initiating sidewinding gait...")
-        time.sleep(1.0)
         
         # --- SIDEWINDING GAIT PARAMETERS ---
         # Sidewinding generates two orthogonal travelling waves:
@@ -109,15 +108,8 @@ def main():
     except KeyboardInterrupt:
         print("\n\nHalting sidewinding gait...")
     finally:
-        print("Centering motors to mechanical zero...")
-        center_pos = {i: 2048 for i in range(1, 11)}
-        iface.write_positions(center_pos, speed=600)
-        time.sleep(1.0)
-        print("Disabling torque to relax servos...")
-        iface.disable_torque()
-        time.sleep(0.3)
         iface.disconnect()
-        print("Hardware shutdown complete.")
+        print("Torque-off requested; serial closed.")
 
 if __name__ == "__main__":
     main()

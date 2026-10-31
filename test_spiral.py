@@ -33,6 +33,7 @@ def main():
     print("Press Ctrl+C to stop.")
     
     try:
+        iface.start()
         # --- ALIGNMENT SEQUENCE ---
         print("Aligning all servos to center (straightening up slowly)...")
         center_pos = {i: 2048 for i in range(1, 11)}
@@ -47,7 +48,6 @@ def main():
             time.sleep(0.05)
             
         print("Alignment complete! Starting spiral curl...")
-        time.sleep(1)
         
         # --- SPIRAL PARAMETERS ---
         max_degrees = 45
@@ -83,17 +83,8 @@ def main():
     except KeyboardInterrupt:
         print("\nStopping test...")
     finally:
-        print("\nUnfurling and centering motors before exit...")
-        # Unfurl slowly before exit
-        center_pos = {i: 2048 for i in range(1, 11)}
-        
-        # Send center command and wait a few seconds so it finishes
-        for _ in range(60): # 3 seconds
-            iface.write_positions(center_pos, speed=400)
-            time.sleep(0.05)
-            
         iface.disconnect()
-        print("Hardware Shutdown Complete.")
+        print("Torque-off requested; serial closed.")
 
 if __name__ == "__main__":
     main()

@@ -34,6 +34,7 @@ def main():
     print("Press Ctrl+C to stop.")
     
     try:
+        iface.start()
         # --- ALIGNMENT SEQUENCE ---
         print("Aligning all servos to center (straightening up slowly)...")
         center_pos = {i: 2048 for i in range(1, 11)}
@@ -50,7 +51,7 @@ def main():
             time.sleep(0.05)
             
         print("Alignment complete! Starting sine wave...")
-        time.sleep(1) # Brief pause before the wave starts
+        # Continue targets without a pause longer than the receiver watchdog.
         
         start_time = time.time()
         
@@ -81,13 +82,8 @@ def main():
     except KeyboardInterrupt:
         print("\nStopping test...")
     finally:
-        # Gracefully center all motors on exit so it doesn't stay twisted
-        print("\nCentering motors before exit...")
-        center_pos = {i: 2048 for i in range(1, 11)}
-        iface.write_positions(center_pos)
-        time.sleep(0.5)
         iface.disconnect()
-        print("Hardware Shutdown Complete.")
+        print("Torque-off requested; serial closed.")
 
 if __name__ == "__main__":
     main()

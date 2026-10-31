@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isDrawing = false;
     let isPanning = false;
     let isRunning = false;
+    let previousStatus = '';
 
     // --- System Stats Polling ---
     async function updateSystemStats() {
@@ -46,10 +47,12 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('status-dot').className = isRunning ? 'dot active' : 'dot';
             document.getElementById('btn-connect').textContent = isRunning ? 'Disconnect Engine' : 'Connect Engine';
 
-            if (wasRunning && !isRunning && data.status === 'Path Complete') {
+            document.getElementById('path-progress').textContent = `Route progress: ${(data.progress * 100).toFixed(0)}%`;
+            if (previousStatus !== 'Path Complete' && data.status === 'Path Complete') {
                 setTimeout(fetchAndShowReport, 300);
             }
 
+            previousStatus = data.status;
             robotPose = data.robot_pose;
             actualPath = data.actual_path;
             segments = data.segments || [];
@@ -85,9 +88,15 @@ document.addEventListener('DOMContentLoaded', () => {
             
             for (const id of dxlIds) {
                 const m = data.telemetry[id];
+                if (m.valid === false) {
+                    const box = document.createElement('div');
+                    box.className = 'telem-box';
+                    box.textContent = `MOTOR ${id}: feedback missing`;
+                    grid.appendChild(box);
+                    continue;
+                }
                 const deg = ((m.position - 2048) * (360.0 / 4096.0)).toFixed(1);
-                // raw load 0-1000 maps to 0-30 kg.cm for ST3215
-                const torque = (m.load * 0.03).toFixed(2);
+                const torque = m.load;
                 
                 const box = document.createElement('div');
                 box.className = 'telem-box';
@@ -95,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="motor-id">MOTOR ${id}</div>
                     <div class="data-row"><span>Angle:</span> <span>${deg}°</span></div>
                     <div class="data-row"><span>Speed:</span> <span>${m.velocity}</span></div>
-                    <div class="data-row"><span>Torque:</span> <span>${torque} kg.cm</span></div>
+                    <div class="data-row"><span>Load (raw):</span> <span>${torque}</span></div>
                 `;
                 grid.appendChild(box);
             }
@@ -113,16 +122,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const headless = document.getElementById('sim-headless').checked;
         const wasRunning = isRunning;
         
-        await fetch('/api/connect', {
+        const response = await fetch('/api/connect', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({engine: engine, headless: headless})
+            body: JSON.stringify({engine: engine, headless: headless, port: document.getElementById('hardware-port').value})
         });
+
+        const result = await response.json();
+        if (!response.ok || !result.success) alert(result.error || result.status);
 
         if (wasRunning) {
             setTimeout(fetchAndShowReport, 300);
         }
     });
+
+    for (const action of ['start', 'stop']) {
+        document.getElementById(`btn-${action}`).addEventListener('click', async () => {
+            const response = await fetch(`/api/${action}`, {method: 'POST'});
+            const result = await response.json();
+            if (!response.ok) alert(result.error || 'Command failed');
+            if (action === 'stop' && response.ok) fetchAndShowReport();
+        });
+    }
 
     document.getElementById('btn-clear').addEventListener('click', async () => {
         targetPath = [];
@@ -220,16 +241,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         targetPath = [];
         try {
-            const safeFunc = funcStr
-                .replace(/sin/g, 'Math.sin')
-                .replace(/cos/g, 'Math.cos')
-                .replace(/tan/g, 'Math.tan')
-                .replace(/abs/g, 'Math.abs')
-                .replace(/sqrt/g, 'Math.sqrt');
-                
-            for (let x = a; x <= b; x += 0.1) {
-                let y = eval(safeFunc.replace(/x/g, `(${x})`));
-                targetPath.push([x, y]);
+            const functions = {'sin(x)': x => .3 * Math.sin(x), 'cos(x)': x => .3 * Math.cos(x), '0': () => 0};
+            if (!functions[funcStr] || !Number.isFinite(a) || !Number.isFinite(b) || a >= b || a < -20 || b > 20) {
+                throw new Error('Choose a preset and limits within -20..20 m');
+            }
+            for (let x = a; x <= b + 1e-9; x += .1) {
+                targetPath.push([Math.min(x, b), functions[funcStr](x)]);
             }
             await sendPath();
             renderCanvas();
@@ -239,11 +256,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function sendPath() {
-        await fetch('/api/set_path', {
+        const response = await fetch('/api/set_path', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({path: targetPath})
         });
+        if (!response.ok) {
+            const result = await response.json();
+            alert(result.error || 'Path rejected');
+        }
     }
 
     // --- Canvas Drawing & Pan/Zoom ---

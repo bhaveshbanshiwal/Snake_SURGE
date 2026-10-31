@@ -182,6 +182,12 @@ class SnakeDashboard(tk.Tk):
         self.update_idletasks()
         
         success, msg = self.active_iface.connect()
+        if success and self.mode_var.get() == "ST3215":
+            try:
+                self.active_iface.start()
+            except Exception as error:
+                self.active_iface.disconnect()
+                success, msg = False, str(error)
         self.status_var.set(f"Status: {msg}")
         
         if success:
@@ -333,6 +339,10 @@ class SnakeDashboard(tk.Tk):
                 telemetry = self.active_iface.read_telemetry()
                 for dxl_id, data in telemetry.items():
                     if dxl_id in self.labels:
+                        if data.get('valid') is False:
+                            for label in self.labels[dxl_id].values():
+                                label.config(text='Feedback missing')
+                            continue
                         deg = (data['position'] - 2048) * (360.0 / 4096.0)
                         torque_nm = data['load'] * (0.22 / 1500.0)
                         self.labels[dxl_id]['pos'].config(text=f"Angle:  {deg:5.1f}°")
@@ -341,7 +351,10 @@ class SnakeDashboard(tk.Tk):
             except Exception as e:
                 print(f"Engine connection lost: {e}")
                 self.is_running = False
-                self.active_iface.is_connected = False
+                try:
+                    self.active_iface.disconnect()
+                except Exception as stop_error:
+                    print(f"Shutdown unconfirmed: {stop_error}")
                 self.btn_connect.config(text="Connect Engine")
                 self.status_var.set("Status: Engine Closed")
                     
@@ -357,6 +370,7 @@ def run_headless(use_sim=False):
     if use_sim:
         iface = SimulationInterface()
         print("Starting Simulation Engine...")
+    else:
         import serial.tools.list_ports
         import platform
         default_port = 'COM12' if platform.system() == 'Windows' else '/dev/ttyUSB0'
@@ -380,6 +394,8 @@ def run_headless(use_sim=False):
     
     start_time = time.time()
     try:
+        if not use_sim:
+            iface.start()
         while True:
             curr_time = time.time() - start_time
             if use_sim:

@@ -37,6 +37,7 @@ def main():
     # Send the command repeatedly for a few seconds to ensure it gets there slowly
     # speed=400 is very slow and gentle
     try:
+        iface.start()
         for _ in range(100):
             iface.write_positions(center_pos, speed=400)
             time.sleep(0.05)
