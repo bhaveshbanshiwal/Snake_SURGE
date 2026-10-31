@@ -10,6 +10,8 @@
 #include <esp_mac.h>
 #include <esp_now.h>
 #include <esp_wifi.h>
+#include <ArduinoOTA.h>
+#include "secrets.h"
 
 volatile char wirelessBuffer[250];
 volatile bool hasWirelessCmd = false;
@@ -127,7 +129,10 @@ void setup() {
   strip.show(); // Initialize all pixels to 'off'
   strip.setBrightness(50); // Set brightness to 20% (max is 255)
 
-  WiFi.mode(WIFI_STA);
+  WiFi.mode(WIFI_AP_STA);
+  WiFi.softAP(OTA_AP_SSID, OTA_AP_PASSWORD, 1);
+  ArduinoOTA.setHostname("Snake-ESP32");
+  ArduinoOTA.begin();
   
   // Spoof the MAC address of the OLD receiver so transmitters don't need code updates
   uint8_t oldMac[] = {0x28, 0x05, 0xA5, 0x4E, 0x01, 0x38};
@@ -230,6 +235,7 @@ void processCommand(String req) {
   }
 }
 void loop() {
+  ArduinoOTA.handle();
   unsigned long now = millis();
   
   if (Serial.available()) {
