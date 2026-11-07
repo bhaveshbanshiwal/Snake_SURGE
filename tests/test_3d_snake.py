@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-for p in [str(PROJECT_ROOT), str(PROJECT_ROOT / 'kinematics'), str(PROJECT_ROOT / 'website'), str(PROJECT_ROOT / 'website/surge_control')]:
+for p in [str(PROJECT_ROOT), str(PROJECT_ROOT / 'kinematics'), str(PROJECT_ROOT / 'website')]:
     if p not in sys.path:
         sys.path.insert(0, p)
 
@@ -240,7 +240,10 @@ def main(argv=None):
                               'targets_at_0': target_at(0), 'note': 'Preview targets only; no measured feedback.'}, indent=2))
             return
         if args.simulate:
-            from simulation import SimulationInterface
+            try:
+                from website.simulation import SimulationInterface
+            except ImportError:
+                from simulation import SimulationInterface
             iface = SimulationInterface(config, args.link_length, args.link_mass, args.sim_torque, args.headless)
         else:
             iface = ST3215Interface(port=args.port)

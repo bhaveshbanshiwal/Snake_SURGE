@@ -6,7 +6,13 @@ from pathlib import Path
 
 from collections import deque
 
-from gait import COUNTS_PER_RADIAN
+try:
+    from kinematics.gait import COUNTS_PER_RADIAN
+except (ImportError, AttributeError):
+    try:
+        from gait import COUNTS_PER_RADIAN
+    except (ImportError, AttributeError):
+        COUNTS_PER_RADIAN = 4096.0 / (2.0 * math.pi)
 
 # ST3215 response fitted to the 24-26 Oct hardware logs (tools/replay_run.py --all): feedback trails
 # the command by 0.25 s on average (sim with this delay: 0.23 s) and settles 2-4 counts short. Stall torque 2.94 Nm at 12 V, scaled to 3S.

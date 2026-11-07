@@ -5,7 +5,7 @@ import time
 from .gait import SnakeKinematics
 from .path_engine import PathEngine
 from .hardware import ST3215Interface
-from .simulation import SimulationInterface
+from .simulation_planar import SimulationInterface
 from .manual import ManualController, Localization
 
 

@@ -21,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parents[1]  # website directory
 PROJECT_ROOT = BASE_DIR.parent
 ROOT = BASE_DIR
 
-for p in [str(PROJECT_ROOT), str(PROJECT_ROOT / 'kinematics'), str(BASE_DIR), str(BASE_DIR / 'surge_control')]:
+for p in [str(PROJECT_ROOT), str(PROJECT_ROOT / 'kinematics'), str(BASE_DIR)]:
     if p not in sys.path:
         sys.path.insert(0, p)
 
@@ -701,7 +701,10 @@ class Gen3Control:
             iface = None
             cancelled = False
             try:
-                from simulation import SimulationInterface
+                try:
+                    from website.simulation import SimulationInterface
+                except ImportError:
+                    from simulation import SimulationInterface
                 iface = SimulationInterface(config, None, .25, 2, True)
                 ok, message = iface.connect()
                 if not ok:
