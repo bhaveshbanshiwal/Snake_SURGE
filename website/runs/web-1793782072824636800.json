@@ -1,0 +1,157 @@
+{
+  "operator": null,
+  "mode": "gait",
+  "execution": "simulation",
+  "joint_map": {
+    "joints": [
+      {
+        "id": 1,
+        "axis": "pitch",
+        "sign": 1,
+        "zero": 2048,
+        "min": 796,
+        "max": 3300
+      },
+      {
+        "id": 2,
+        "axis": "yaw",
+        "sign": 1,
+        "zero": 2048,
+        "min": 796,
+        "max": 3300
+      },
+      {
+        "id": 3,
+        "axis": "pitch",
+        "sign": -1,
+        "zero": 2048,
+        "min": 796,
+        "max": 3300
+      },
+      {
+        "id": 4,
+        "axis": "yaw",
+        "sign": 1,
+        "zero": 2048,
+        "min": 796,
+        "max": 3300
+      },
+      {
+        "id": 5,
+        "axis": "pitch",
+        "sign": -1,
+        "zero": 2048,
+        "min": 796,
+        "max": 3300
+      },
+      {
+        "id": 6,
+        "axis": "yaw",
+        "sign": 1,
+        "zero": 2048,
+        "min": 796,
+        "max": 3300
+      },
+      {
+        "id": 7,
+        "axis": "pitch",
+        "sign": -1,
+        "zero": 2048,
+        "min": 796,
+        "max": 3300
+      },
+      {
+        "id": 8,
+        "axis": "yaw",
+        "sign": 1,
+        "zero": 2048,
+        "min": 796,
+        "max": 3300
+      },
+      {
+        "id": 9,
+        "axis": "pitch",
+        "sign": -1,
+        "zero": 2048,
+        "min": 796,
+        "max": 3300
+      },
+      {
+        "id": 10,
+        "axis": "yaw",
+        "sign": 1,
+        "zero": 2048,
+        "min": 796,
+        "max": 3300
+      }
+    ],
+    "speed": 2144,
+    "tracking_error": 796,
+    "tracking_timeout": 2,
+    "calibrated": true
+  },
+  "simulation_tracking": {
+    "tracking_error": 796,
+    "tracking_timeout": 2
+  },
+  "simulation_path": null,
+  "values": [
+    0.6981317007977318,
+    0.0,
+    0.0,
+    0.5,
+    1.5707963267948966,
+    0.0,
+    60,
+    2
+  ],
+  "joint_overrides": null,
+  "pose_targets": null,
+  "duration": 60,
+  "ramp": 2,
+  "speed": 3000,
+  "id": null,
+  "ticks": 0,
+  "timestamp": 1793782072.827584,
+  "annotations": {},
+  "controller": {
+    "sequence": 1,
+    "deadman": true,
+    "assist": "manual",
+    "inspection": false,
+    "reversed": false,
+    "preset": 0,
+    "yaw_gain": 1,
+    "pitch_gain": 1,
+    "rate": 0.0,
+    "feedback_scale": 1.0,
+    "feedback_reason": "Not sampled",
+    "route": null,
+    "steering": {
+      "mode": "3d",
+      "measured": false,
+      "heading": 0.0,
+      "target_heading": 0.0,
+      "heading_error": 0.0,
+      "elevation": 0.0,
+      "target_elevation": 0.0,
+      "neck": 0.0,
+      "on_floor": false,
+      "curvature": 0.0,
+      "path_s": 0.0,
+      "limited": [],
+      "angles": {
+        "1": 0.0,
+        "2": 0.0,
+        "3": 0.0,
+        "4": 0.0,
+        "5": 0.0,
+        "6": 0.0,
+        "7": 0.0,
+        "8": 0.0,
+        "9": 0.0,
+        "10": 0.0
+      }
+    }
+  }
+}

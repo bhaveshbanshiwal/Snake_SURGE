@@ -3,7 +3,7 @@
 The Snake SURGE project supports **Over-The-Air (OTA) updates**, allowing you to flash new code to the ESP32 receiver wirelessly without plugging in a USB cable. This is especially useful for preventing USB port crashes caused by power spikes from the servos.
 
 ## Wi-Fi Credentials
-The ESP32 broadcasts its own Wi-Fi Hotspot (Access Point) specifically for this purpose. The credentials are defined in `src/esp32_st3215/secrets.h`:
+The ESP32 broadcasts its own Wi-Fi Hotspot (Access Point) specifically for this purpose. The credentials are defined in `firmware/esp32_st3215/secrets.h`:
 
 - **Wi-Fi Network Name (SSID):** `Snake_SURGE_OTA`
 - **Wi-Fi Password:** `snake12345`

@@ -1,0 +1,116 @@
+{
+  "mode": "gait",
+  "execution": "preview",
+  "arguments": {
+    "hardware": false,
+    "simulate": false,
+    "headless": false,
+    "link_length": null,
+    "link_mass": 0.25,
+    "sim_torque": 2.72,
+    "port": null,
+    "map": "C:\\Users\\bansi\\OneDrive\\Desktop\\Snake_SURGE\\kinematics\\joint_map.json",
+    "mode": "gait",
+    "free_shaft": false,
+    "duration": 3.0,
+    "ramp": 1.0,
+    "yaw": 5.0,
+    "pitch": 5.0,
+    "bias": 0,
+    "frequency": 0.1,
+    "lag": 90,
+    "offset": 90,
+    "speed": null,
+    "id": null,
+    "ticks": null,
+    "log": null
+  },
+  "joint_map": {
+    "joints": [
+      {
+        "id": 1,
+        "axis": "pitch",
+        "sign": 1,
+        "zero": 2048,
+        "min": 796,
+        "max": 3300
+      },
+      {
+        "id": 2,
+        "axis": "yaw",
+        "sign": 1,
+        "zero": 2048,
+        "min": 796,
+        "max": 3300
+      },
+      {
+        "id": 3,
+        "axis": "pitch",
+        "sign": -1,
+        "zero": 2048,
+        "min": 796,
+        "max": 3300
+      },
+      {
+        "id": 4,
+        "axis": "yaw",
+        "sign": 1,
+        "zero": 2048,
+        "min": 796,
+        "max": 3300
+      },
+      {
+        "id": 5,
+        "axis": "pitch",
+        "sign": -1,
+        "zero": 2048,
+        "min": 796,
+        "max": 3300
+      },
+      {
+        "id": 6,
+        "axis": "yaw",
+        "sign": 1,
+        "zero": 2048,
+        "min": 796,
+        "max": 3300
+      },
+      {
+        "id": 7,
+        "axis": "pitch",
+        "sign": -1,
+        "zero": 2048,
+        "min": 796,
+        "max": 3300
+      },
+      {
+        "id": 8,
+        "axis": "yaw",
+        "sign": 1,
+        "zero": 2048,
+        "min": 796,
+        "max": 3300
+      },
+      {
+        "id": 9,
+        "axis": "pitch",
+        "sign": -1,
+        "zero": 2048,
+        "min": 796,
+        "max": 3300
+      },
+      {
+        "id": 10,
+        "axis": "yaw",
+        "sign": 1,
+        "zero": 2048,
+        "min": 796,
+        "max": 3300
+      }
+    ],
+    "speed": 2144,
+    "tracking_error": 492,
+    "tracking_timeout": 0.5,
+    "calibrated": true
+  }
+}
