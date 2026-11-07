@@ -186,10 +186,6 @@ def create_app(runtime=None):
 
     @app.post('/api/gen3/session/login')
     def gen3_session_login():
-        is_loopback = request.remote_addr in ('127.0.0.1', '::1', 'localhost', None)
-        is_secure = is_request_secure()
-        if not is_loopback and not is_secure:
-            return jsonify(error='Operator credentials must not be transmitted over remote plaintext HTTP. Use HTTPS or connect locally.'), 403
         data = request.get_json(silent=True) or {}
         name = data.get('name')
         password = data.get('password')

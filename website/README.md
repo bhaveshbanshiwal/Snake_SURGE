@@ -31,9 +31,6 @@ python3 -m venv .venv
 
 ### 2. Start Server
 ```bash
-read -rsp 'SurGe operator password: ' SURGE_OPERATOR_PASSWORD
-echo
-export SURGE_OPERATOR_PASSWORD
 .venv/bin/python website/web_app.py --host 0.0.0.0 --port 5000
 ```
 

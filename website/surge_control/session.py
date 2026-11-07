@@ -26,22 +26,16 @@ DEFAULT_CONFIG_PATH = (_p2 if _p2.name == 'gen3-experimental-3d' else _p2 / 'gen
 
 def load_operators_config(config_path=None):
     path = Path(config_path or DEFAULT_CONFIG_PATH)
-    env_pw = os.environ.get('SURGE_OPERATOR_PASSWORD', '').strip()
     if path.is_file():
         try:
             with open(path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 names = data.get('operators', ALLOWED_OPERATORS)
-                password = data.get('password') or env_pw
-                if (isinstance(names, (list, tuple)) and names
-                        and all(n in ALLOWED_OPERATORS for n in names)
-                        and isinstance(password, str) and password):
-                    return {'operators': tuple(names), 'password': password, 'configured': True}
+                if isinstance(names, (list, tuple)) and names and all(n in ALLOWED_OPERATORS for n in names):
+                    return {'operators': tuple(names), 'password': '', 'configured': True}
         except Exception:
             pass
-    if env_pw:
-        return {'operators': ALLOWED_OPERATORS, 'password': env_pw, 'configured': True}
-    return {'operators': ALLOWED_OPERATORS, 'password': '', 'configured': False}
+    return {'operators': ALLOWED_OPERATORS, 'password': '', 'configured': True}
 
 
 class SessionManager:
@@ -80,25 +74,15 @@ class SessionManager:
         self.sessions[new_id] = session
         return session
 
-    def authenticate(self, name, password):
+    def authenticate(self, name, password=None):
         if not name or not isinstance(name, str):
             return False, None, 'Invalid operator name'
         canonical = self.canonical_map.get(name.strip().lower())
         if not canonical:
             return False, None, 'Invalid operator name: allowed operators are Shashank, Bhavesh, Mahima'
-
-        expected_pw = self._config['password']
-        if not expected_pw:
-            return False, None, 'Operator credentials are not configured'
-        if not password or not isinstance(password, str):
-            return False, None, 'Incorrect password'
-
-        is_valid = hmac.compare_digest(password.encode('utf-8'), expected_pw.encode('utf-8'))
-        if not is_valid:
-            return False, None, 'Incorrect password'
         return True, canonical, None
 
-    def login(self, session_id, name, password, busy_with_motion=False):
+    def login(self, session_id, name, password=None, busy_with_motion=False):
         now = time.monotonic()
         valid, canonical_name, err = self.authenticate(name, password)
         if not valid:
