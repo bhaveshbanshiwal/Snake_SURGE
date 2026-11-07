@@ -391,7 +391,7 @@
     connect.textContent = simulationState === 'connected' || simulationState === 'running'
       ? 'Disconnect simulation engine' : simulationState === 'connecting' ? 'Connecting…'
       : simulationState === 'disconnecting' ? 'Disconnecting…' : 'Connect simulation engine';
-    connect.disabled = !simulationAvailable || !simOperator || connectionPending || simulationState === 'unknown' ||
+    connect.disabled = !simulationAvailable || connectionPending || simulationState === 'unknown' ||
       simulationState === 'connecting' || simulationState === 'disconnecting' || (simulationBusy && simulationState !== 'running');
     start.disabled = !simOperator || connectionPending || simulationBusy || simulationState !== 'connected';
     for (const id of ['sim-route-line', 'sim-route-curve', 'sim-route-draw', 'sim-route-clear', 'sim-route-apply', 'sim-route-points']) if ($(id)) $(id).disabled = simulationBusy;
